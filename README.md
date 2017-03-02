@@ -51,7 +51,7 @@ USAGE:
 After downloading meybe need add permisson to execute.
 ```
 $ chmod a+x ./rdr
-``
+```
 
 ## Exapmle
 ```
