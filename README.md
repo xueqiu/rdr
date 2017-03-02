@@ -28,14 +28,22 @@ GLOBAL OPTIONS:
 
 ## Exapmle
 ```
-$ ./rdr show -p 8080 example1.rdb example2.rdb
+$ ./rdr show -p 8080 *.rdb
 ```
+Note that the memory usage is approximate.
+[show example](https://cloud.githubusercontent.com/assets/11346514/23500265/5b835326-ff6a-11e6-98e1-6773aaaac444.png)
 
 ```
 $ ./rdr keys example.rdb
+portfolio:stock_follower_count:ZH314136
+portfolio:stock_follower_count:ZH654106
+portfolio:stock_follower:ZH617824
+portfolio:stock_follower_count:ZH001019
+portfolio:stock_follower_count:ZH346349
+portfolio:stock_follower_count:ZH951803
+portfolio:stock_follower:ZH924804
+portfolio:stock_follower_count:INS104806
 ```
-
-## 
 
 ## License
 
