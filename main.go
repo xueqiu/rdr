@@ -118,7 +118,6 @@ func main() {
 	app.Version = "v0.0.1"
 	app.Writer = os.Stdout
 	app.ErrWriter = os.Stderr
-	var port uint
 	app.Commands = []cli.Command{
 		cli.Command{
 			Name:      "show",
@@ -126,10 +125,9 @@ func main() {
 			ArgsUsage: "FILE1 [FILE2] [FILE3]...",
 			Flags: []cli.Flag{
 				cli.UintFlag{
-					Name:        "port, p",
-					Value:       8080,
-					Usage:       "Port for rdr to listen",
-					Destination: &port,
+					Name:  "port, p",
+					Value: 8080,
+					Usage: "Port for rdr to listen",
 				},
 			},
 			Action: show,
