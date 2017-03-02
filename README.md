@@ -24,6 +24,26 @@ GLOBAL OPTIONS:
    --help, -h     show help
    --version, -v  print the version
 ```
+
+```
+NAME:
+   rdr show - show statistical information of rdbfile by webpage
+
+USAGE:
+   rdr show [command options] FILE1 [FILE2] [FILE3]...
+
+OPTIONS:
+   --port value, -p value  Port for rdr to listen (default: 8080)
+```
+
+```
+NAME:
+   rdr keys - get all keys from rdbfile
+
+USAGE:
+   rdr keys FILE1 [FILE2] [FILE3]...
+```
+
 [Linux amd64 Download](http://ohjx11q65.bkt.clouddn.com/rdr)
 
 [OSX Download](http://ohjw7fr2u.bkt.clouddn.com/rdr)
