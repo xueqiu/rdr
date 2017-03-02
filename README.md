@@ -1,7 +1,7 @@
 RDR: redis data reveal
 =================================================
 
-RDR(redis data reveal) is a tool to parse redis rdbfile. Comparing to [redis-rdb-tools](https://github.com/sripathikrishnan/redis-rdb-tools) ,rdr implemented by golang, much faster (especially for big rdbfile).
+RDR(redis data reveal) is a tool to parse redis rdbfile. Comparing to [redis-rdb-tools](https://github.com/sripathikrishnan/redis-rdb-tools), rdr is implemented by golang, much faster (especially for big rdbfile).
 
 ## Usage
 
