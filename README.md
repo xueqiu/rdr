@@ -25,6 +25,7 @@ GLOBAL OPTIONS:
    --version, -v  print the version
 ```
 [Linux amd64 Download](http://ohjx11q65.bkt.clouddn.com/rdr)
+
 [OSX Download](http://ohjw7fr2u.bkt.clouddn.com/rdr)
 
 ## Exapmle
