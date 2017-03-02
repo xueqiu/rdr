@@ -1,0 +1,144 @@
+<div class="content-wrapper" style="min-height: 100px; height: auto; overflow: hidden">
+    <div class="col-md-3">
+        <section class="content-header">
+            <div class="box">
+                <div class="box-body">
+                    <div id="canvas-holder" style="width:100%">
+                        <canvas id="chart-area-0" />
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <div class="col-md-3">
+        <section class="content-header">
+            <div class="box">
+                <div class="box-body">
+                    <div id="canvas-holder-1" style="width:100%">
+                        <canvas id="chart-area-1" />
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <div class="col-md-3">
+        <section class="content-header">
+            <div class="box">
+                <div class="box-body">
+                    <center><strong>len level count</strong></center><br>
+                    <div class="nav-tabs-custom">
+                        <ul id="len-num-head" class="nav nav-tabs">
+                            {{range $type, $entries := .LenLevelCount}}
+                            <li {{if isFirst}} class="active" {{end}}><a href="#bar0-{{$type}}" data-toggle="tab">{{$type}}</a></li>
+                            {{end}} {{$null :=clearFirst}}
+                        </ul>
+                        <div class="tab-content panel-body">
+                            {{range $type, $entries := .LenLevelCount}}
+                            <div id="bar0-{{$type}}" class="tab-pane {{if isFirst}}active{{end}}">
+                                <div id="bar0-container-{{$type}}" style="width:100%">
+                                    <canvas id="bar0-aera-{{$type}}" />
+                                </div>
+                            </div>
+                            {{end}} {{$null :=clearFirst}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <div class="col-md-3">
+        <section class="content-header">
+            <div class="box">
+                <div class="box-body">
+                    <center><strong>len level mem used</strong></center><br>
+                    <div class="nav-tabs-custom">
+                        <ul id="len-mem-head" class="nav nav-tabs">
+                            {{range $type, $entries := .LenLevelCount}}
+                            <li {{if isFirst}} class="active" {{end}}><a href="#bar1-{{$type}}" data-toggle="tab">{{$type}}</a></li>
+                            {{end}} {{$null :=clearFirst}}
+                        </ul>
+                        <div class="tab-content panel-body">
+                            {{range $type, $entries := .LenLevelCount}}
+                            <div id="bar1-{{$type}}" class="tab-pane {{if isFirst}}active{{end}}">
+                                <div id="bar1-container-{{$type}}" style="width:100%">
+                                    <canvas id="bar1-aera-{{$type}}" />
+                                </div>
+                            </div>
+                            {{end}} {{$null :=clearFirst}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <div class="col-md-7">
+        <section class="content-header">
+            <div class="box">
+                <div class="box-body">
+                    <center><strong>top 100 largest keys</strong></center><br>
+                    <table class="table table-condensed table-hover sortable" style="word-break:break-all; word-wrap:break-all;">
+                        <thead>
+                            <tr>
+                                <td class="sorttable_alpha"> Key </td>
+                                <td class="sorttable_alpha"> Type </td>
+                                <td class="sorttable_alpha"> Bytes </td>
+                                <td class="sorttable_numeric"> NumOfElement </td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{range $entry := .LargestKeys}}
+                            <tr>
+                                <td>{{$entry.Key}}</td>
+                                <td>{{$entry.Type}}</td>
+                                <td>{{humanizeBytes $entry.Bytes}}</td>
+                                <td>{{humanizeComma $entry.NumOfElem}}</td>
+                            </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div class="col-md-5">
+        <section class="content-header">
+            <div class="box">
+                <div class="box-body">
+                    <center><strong>count by key prefix</strong></center><br>
+                    <div class="nav-tabs-custom">
+                        <ul class="nav nav-tabs nav-justified">
+                            {{range $type, $entries := .LargestKeyPrefixes}}
+                            <li {{if isFirst}} class="active" {{end}}><a href="#type-{{$type}}" data-toggle="tab">{{$type}}</a></li>
+                            {{end}} {{$null :=clearFirst}}
+                        </ul>
+                        <div class="tab-content panel-body">
+                            {{range $type, $entries := .LargestKeyPrefixes}}
+                            <div id="type-{{$type}}" class="tab-pane {{if isFirst}}active{{end}}">
+                                <table class="table table-condensed table-hover sortable" style="word-break:break-all; word-wrap:break-all;">
+                                    <thead>
+                                        <tr>
+                                            <td class="sorttable_alpha"> KeyPrefix </td>
+                                            <td class="sorttable_alpha"> Bytes </td>
+                                            <td class="sorttable_numeric"> NumberOfKey </td>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {{range $entry := $entries}}
+                                        <tr>
+                                            <td>{{$entry.Key}}</td>
+                                            <td>{{humanizeBytes $entry.Bytes}}</td>
+                                            <td>{{humanizeComma $entry.Num}}</td>
+                                        </tr>
+                                        {{end}}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {{end}} {{$null :=clearFirst}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>

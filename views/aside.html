@@ -1,0 +1,19 @@
+<aside class="main-sidebar">
+    <!-- sidebar: style can be found in sidebar.less -->
+    <section class="sidebar" style="height: auto;">
+        <!-- sidebar menu: : style can be found in sidebar.less -->
+        <ul class="sidebar-menu">
+            <li class="header">
+                <center><strong>rdbfiles</strong></center>
+            </li>
+            <li>
+                {{range $instance := $.Instances}}
+                <li {{if eq $instance $.CurrentInstance}}class="active" {{end}}>
+                    <a href="/instance/{{$instance}}"><i class="fa fa-th"></i> <span>{{$instance}}</span></a>
+                </li>
+                {{end}}
+            </li>
+        </ul>
+    </section>
+    <!-- /.sidebar -->
+</aside>

@@ -1,0 +1,146 @@
+<script>
+    Chart.pluginService.register({
+        afterDraw: function(chart) {
+            if (chart.config.options.elements.center) {
+                var helpers = Chart.helpers;
+                var centerX = (chart.chartArea.left + chart.chartArea.right) / 2;
+                var centerY = (chart.chartArea.top + chart.chartArea.bottom) / 2;
+
+                var ctx = chart.chart.ctx;
+                ctx.save();
+                var fontSize = helpers.getValueOrDefault(chart.config.options.elements.center.fontSize, Chart.defaults.global.defaultFontSize);
+                var fontStyle = helpers.getValueOrDefault(chart.config.options.elements.center.fontStyle, Chart.defaults.global.defaultFontStyle);
+                var fontFamily = helpers.getValueOrDefault(chart.config.options.elements.center.fontFamily, Chart.defaults.global.defaultFontFamily);
+                var font = helpers.fontString(fontSize, fontStyle, fontFamily);
+                ctx.font = font;
+                ctx.fillStyle = helpers.getValueOrDefault(chart.config.options.elements.center.fontColor, Chart.defaults.global.defaultFontColor);
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(chart.config.options.elements.center.text, centerX, centerY);
+                ctx.restore();
+            }
+        },
+    })
+
+    var pieConfig = {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [],
+                backgroundColor: [
+                    window.chartColors.red,
+                    window.chartColors.orange,
+                    window.chartColors.yellow,
+                    window.chartColors.green,
+                    window.chartColors.blue,
+                ],
+            }],
+            labels: []
+        },
+        options: {
+            tPercentage: 40,
+            responsive: true,
+            legend: {
+                display: false
+            },
+            title: {
+                display: true,
+                fontColor: "#000",
+                fontSize: 13,
+                text: 'key number by types'
+            },
+            elements: {
+                center: {
+                    text: '',
+                    fontColor: '#000',
+                    fontFamily: "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
+                    fontSize: 24,
+                    fontStyle: 'normal'
+                }
+            }
+        }
+    };
+    window.onload = function() {
+        var rawPieConfig = JSON.stringify(pieConfig);
+        var pieConfig0 = JSON.parse(rawPieConfig);
+        var pieConfig1 = JSON.parse(rawPieConfig);
+        pieConfig0.options.title.text = "key number by type";
+        pieConfig0.options.elements.center.text = {{humanizeComma .TotleNum}}
+        pieConfig1.options.title.text = "memory used by type (byte)";
+        pieConfig1.options.elements.center.text = {{humanizeBytes .TotleBytes}}
+
+        {{range $type, $num := .TypeNum}}
+        pieConfig0.data.datasets[0].data.push({{$num}});
+        pieConfig1.data.datasets[0].data.push({{index $.TypeBytes $type}});
+        pieConfig0.data.labels.push({{$type}});
+        pieConfig1.data.labels.push({{$type}}); 
+        {{end}}
+
+        var pieCtx0 = document.getElementById("chart-area-0").getContext("2d");
+        window.myPie0 = new Chart(pieCtx0, pieConfig0);
+        var pieCtx1 = document.getElementById("chart-area-1").getContext("2d");
+        window.myPie1 = new Chart(pieCtx1, pieConfig1);
+
+        var count = {}; 
+        {{range $type, $entries := .LenLevelCount}}
+        var entries = []; 
+        {{range $entry := $entries}}
+        entries.push({
+            label: {{$entry.Key}},
+            bytes: {{$entry.Bytes}},
+            num: {{$entry.Num}}
+        }); 
+        {{end}}
+        count[{{$type}}] = entries; 
+        {{end}}
+
+        for (typ in count) {
+            var entries = count[typ];
+            var rawBarConfig = JSON.stringify(barConfig);
+            var barConfig0 = JSON.parse(rawBarConfig);
+            var barConfig1 = JSON.parse(rawBarConfig);
+            for (i in entries) {
+                var entry = entries[i];
+                barConfig0.data.datasets[0].data.push(entry.num);
+                barConfig1.data.datasets[0].data.push(entry.bytes);
+                barConfig0.data.labels.push(">" + entry.label);
+                barConfig1.data.labels.push(">" + entry.label);
+            }
+            var barCtx0 = document.getElementById("bar0-aera-" + typ).getContext("2d");
+            window["myBar0" + typ] = new Chart(barCtx0, barConfig0);
+            var barCtx1 = document.getElementById("bar1-aera-" + typ).getContext("2d");
+            window["myBra1" + typ] = new Chart(barCtx1, barConfig1);
+        }
+    };
+</script>
+
+<script>
+    var barConfig = {
+        type: 'bar',
+        data: {
+            datasets: [{
+                data: [],
+                backgroundColor: [
+                    window.chartColors.red,
+                    window.chartColors.orange,
+                    window.chartColors.yellow,
+                    window.chartColors.green,
+                    window.chartColors.blue,
+                ],
+            }],
+            xAxisID: "bigger than",
+            yAxisID: "number",
+            labels: []
+        },
+        options: {
+            tPercentage: 40,
+            responsive: true,
+            legend: {
+                display: false
+            },
+            title: {
+                display: false,
+            }
+        }
+    };
+</script>

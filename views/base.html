@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+
+<head>
+    <title>RDR</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <!-- Bootstrap 3.3.4 -->
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <!-- FontAwesome 4.3.0 -->
+    <link href="/static/plugins/icons/font-awesome.min.css" rel="stylesheet" type="text/css" />
+    <!-- Ionicons 2.0.0 -->
+    <link href="/static/plugins/icons/ionicons.min.css" rel="stylesheet" type="text/css" />
+    <!-- Theme style -->
+    <link href="/static/dist/css/AdminLTE.css" rel="stylesheet" type="text/css" />
+    <!-- AdminLTE Skins. Choose a skin from the css/skins
+         folder instead of downloading all of them to reduce the load. -->
+    <link href="/static/dist/css/skins/_all-skins.min.css" rel="stylesheet" type="text/css" />
+    <!-- jQuery 2.1.4 -->
+    <script src="/static/plugins/jQuery/jQuery-2.1.4.min.js"></script>
+    <script src="/static/chartjs/Chart.js"></script>
+    <script src="/static/chartjs/utils.js"></script>
+    <script src="/static/js/sorttable.js"></script>
+
+    <!-- iCheck -->
+    <link href="/static/plugins/iCheck/flat/blue.css" rel="stylesheet" type="text/css" />
+
+</head>
+
+<body class="skin-blue sidebar-mini wysihtml5-supported">
+    <div class="wrapper" style="min-height: 800px; height: auto;">
+        {{template "header.html" .}} {{template "aside.html" .}} {{template "chartjs.html" .}} {{ .LayoutContent }} {{template "footer.html" .}}
+    </div>
+    <script type="text/javascript" src="/static/bootstrap/js/bootstrap-tooltip.js?v=2015081901"></script>
+    <script type="text/javascript" src="/static/bootstrap/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="/static/plugins/fastclick/fastclick.min.js"></script>
+    <script type="text/javascript" src="/static/dist/js/app.min.js"></script>
+    <script type="text/javascript" src="/static/dist/js/demo.js"></script>
+    <script type="text/javascript" src="/static/plugins/autobahn/autobahn.min.js"></script>
+</body>
+
+</html>
