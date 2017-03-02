@@ -48,6 +48,11 @@ USAGE:
 
 [OSX Download](http://ohjw7fr2u.bkt.clouddn.com/rdr)
 
+After downloading meybe need add permisson to execute.
+```
+$ chmod a+x ./rdr
+``
+
 ## Exapmle
 ```
 $ ./rdr show -p 8080 *.rdb
