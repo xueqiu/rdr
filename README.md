@@ -24,14 +24,15 @@ GLOBAL OPTIONS:
    --help, -h     show help
    --version, -v  print the version
 ```
-[Download](https://baidu.com) here.
+[Linux amd64 Download](http://ohjx11q65.bkt.clouddn.com/rdr)
+[OSX Download](http://ohjw7fr2u.bkt.clouddn.com/rdr)
 
 ## Exapmle
 ```
 $ ./rdr show -p 8080 *.rdb
 ```
 Note that the memory usage is approximate.
-[show example](https://cloud.githubusercontent.com/assets/11346514/23500265/5b835326-ff6a-11e6-98e1-6773aaaac444.png)
+![show example](http://ohjx11q65.bkt.clouddn.com/example.png)
 
 ```
 $ ./rdr keys example.rdb
