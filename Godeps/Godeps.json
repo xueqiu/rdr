@@ -1,0 +1,52 @@
+{
+	"ImportPath": "github.com/xueqiu/rdr",
+	"GoVersion": "go1.7",
+	"GodepVersion": "v75",
+	"Deps": [
+		{
+			"ImportPath": "github.com/cupcake/rdb",
+			"Rev": "3454dcabd33cb8ea8261ffd6a45f4d836eb504cc"
+		},
+		{
+			"ImportPath": "github.com/cupcake/rdb/crc64",
+			"Rev": "3454dcabd33cb8ea8261ffd6a45f4d836eb504cc"
+		},
+		{
+			"ImportPath": "github.com/cupcake/rdb/nopdecoder",
+			"Rev": "3454dcabd33cb8ea8261ffd6a45f4d836eb504cc"
+		},
+		{
+			"ImportPath": "github.com/davecgh/go-spew/spew",
+			"Comment": "v1.1.0",
+			"Rev": "346938d642f2ec3594ed81d874461961cd0faa76"
+		},
+		{
+			"ImportPath": "github.com/dustin/go-humanize",
+			"Rev": "bd88f87ad3a420f7bcf05e90566fd1ceb351fa7f"
+		},
+		{
+			"ImportPath": "github.com/elazarl/go-bindata-assetfs",
+			"Rev": "9a6736ed45b44bf3835afeebb3034b57ed329f3e"
+		},
+		{
+			"ImportPath": "github.com/julienschmidt/httprouter",
+			"Comment": "v1.1-38-g4563b0b",
+			"Rev": "4563b0ba73e4db6c6423b60a26f3cadd2e9a1ec9"
+		},
+		{
+			"ImportPath": "github.com/pmezard/go-difflib/difflib",
+			"Comment": "v1.0.0",
+			"Rev": "792786c7400a136282c1664665ae0a8db921c6c2"
+		},
+		{
+			"ImportPath": "github.com/stretchr/testify/assert",
+			"Comment": "v1.1.4-27-g4d4bfba",
+			"Rev": "4d4bfba8f1d1027c4fdbe371823030df51419987"
+		},
+		{
+			"ImportPath": "github.com/urfave/cli",
+			"Comment": "v1.19.1-22-g2526b57",
+			"Rev": "2526b57c56f30b50466c96c4133b1a4ad0f0191f"
+		}
+	]
+}
