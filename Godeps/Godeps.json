@@ -5,15 +5,15 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/cupcake/rdb",
-			"Rev": "3454dcabd33cb8ea8261ffd6a45f4d836eb504cc"
+			"Rev": "43ba34106c765f2111c0dc7b74cdf8ee437411e0"
 		},
 		{
 			"ImportPath": "github.com/cupcake/rdb/crc64",
-			"Rev": "3454dcabd33cb8ea8261ffd6a45f4d836eb504cc"
+			"Rev": "43ba34106c765f2111c0dc7b74cdf8ee437411e0"
 		},
 		{
 			"ImportPath": "github.com/cupcake/rdb/nopdecoder",
-			"Rev": "3454dcabd33cb8ea8261ffd6a45f4d836eb504cc"
+			"Rev": "43ba34106c765f2111c0dc7b74cdf8ee437411e0"
 		},
 		{
 			"ImportPath": "github.com/davecgh/go-spew/spew",

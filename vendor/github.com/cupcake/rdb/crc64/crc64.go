@@ -35,7 +35,7 @@ type digest struct {
 	crc uint64
 }
 
-func New() hash.Hash {
+func New() hash.Hash64 {
 	return &digest{}
 }
 

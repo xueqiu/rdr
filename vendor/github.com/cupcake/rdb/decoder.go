@@ -20,6 +20,10 @@ type Decoder interface {
 	// StartDatabase is called when database n starts.
 	// Once a database starts, another database will not start until EndDatabase is called.
 	StartDatabase(n int)
+	// AUX field
+	Aux(key, value []byte)
+	// ResizeDB hint
+	ResizeDatabase(dbSize, expiresSize uint32)
 	// Set is called once for each string key.
 	Set(key, value []byte, expiry int64)
 	// StartHash is called at the beginning of a hash.
@@ -38,6 +42,7 @@ type Decoder interface {
 	EndSet(key []byte)
 	// StartList is called at the beginning of a list.
 	// Rpush will be called exactly length times before EndList.
+	// If length of the list is not known, then length is -1
 	StartList(key []byte, length, expiry int64)
 	// Rpush is called once for each value in a list.
 	Rpush(key, value []byte)
@@ -102,11 +107,12 @@ const (
 	TypeZSet   ValueType = 3
 	TypeHash   ValueType = 4
 
-	TypeHashZipmap  ValueType = 9
-	TypeListZiplist ValueType = 10
-	TypeSetIntset   ValueType = 11
-	TypeZSetZiplist ValueType = 12
-	TypeHashZiplist ValueType = 13
+	TypeHashZipmap    ValueType = 9
+	TypeListZiplist   ValueType = 10
+	TypeSetIntset     ValueType = 11
+	TypeZSetZiplist   ValueType = 12
+	TypeHashZiplist   ValueType = 13
+	TypeListQuicklist ValueType = 14
 )
 
 const (
@@ -115,6 +121,8 @@ const (
 	rdb32bitLen = 2
 	rdbEncVal   = 3
 
+	rdbFlagAux      = 0xfa
+	rdbFlagResizeDB = 0xfb
 	rdbFlagExpiryMS = 0xfc
 	rdbFlagExpiry   = 0xfd
 	rdbFlagSelectDB = 0xfe
@@ -154,6 +162,26 @@ func (d *decode) decode() error {
 			return err
 		}
 		switch objType {
+		case rdbFlagAux:
+			auxKey, err := d.readString()
+			if err != nil {
+				return err
+			}
+			auxVal, err := d.readString()
+			if err != nil {
+				return err
+			}
+			d.event.Aux(auxKey, auxVal)
+		case rdbFlagResizeDB:
+			dbSize, _, err := d.readLength()
+			if err != nil {
+				return err
+			}
+			expiresSize, _, err := d.readLength()
+			if err != nil {
+				return err
+			}
+			d.event.ResizeDatabase(dbSize, expiresSize)
 		case rdbFlagExpiryMS:
 			_, err := io.ReadFull(d.r, d.intBuf)
 			if err != nil {
@@ -188,6 +216,7 @@ func (d *decode) decode() error {
 			if err != nil {
 				return err
 			}
+			expiry = 0
 		}
 	}
 
@@ -214,6 +243,16 @@ func (d *decode) readObject(key []byte, typ ValueType, expiry int64) error {
 				return err
 			}
 			d.event.Rpush(key, value)
+		}
+		d.event.EndList(key)
+	case TypeListQuicklist:
+		length, _, err := d.readLength()
+		if err != nil {
+			return err
+		}
+		d.event.StartList(key, int64(-1), expiry)
+		for i := uint32(0); i < length; i++ {
+			d.readZiplist(key, 0, false)
 		}
 		d.event.EndList(key)
 	case TypeSet:
@@ -269,7 +308,7 @@ func (d *decode) readObject(key []byte, typ ValueType, expiry int64) error {
 	case TypeHashZipmap:
 		return d.readZipmap(key, expiry)
 	case TypeListZiplist:
-		return d.readZiplist(key, expiry)
+		return d.readZiplist(key, expiry, true)
 	case TypeSetIntset:
 		return d.readIntset(key, expiry)
 	case TypeZSetZiplist:
@@ -378,7 +417,7 @@ func readZipmapItemLength(buf *sliceBuffer, readFree bool) (int, int, error) {
 	return int(b), int(free), err
 }
 
-func (d *decode) readZiplist(key []byte, expiry int64) error {
+func (d *decode) readZiplist(key []byte, expiry int64, addListEvents bool) error {
 	ziplist, err := d.readString()
 	if err != nil {
 		return err
@@ -388,7 +427,9 @@ func (d *decode) readZiplist(key []byte, expiry int64) error {
 	if err != nil {
 		return err
 	}
-	d.event.StartList(key, length, expiry)
+	if addListEvents {
+		d.event.StartList(key, length, expiry)
+	}
 	for i := int64(0); i < length; i++ {
 		entry, err := readZiplistEntry(buf)
 		if err != nil {
@@ -396,7 +437,9 @@ func (d *decode) readZiplist(key []byte, expiry int64) error {
 		}
 		d.event.Rpush(key, entry)
 	}
-	d.event.EndList(key)
+	if addListEvents {
+		d.event.EndList(key)
+	}
 	return nil
 }
 
@@ -585,7 +628,7 @@ func (d *decode) checkHeader() error {
 	}
 
 	version, _ := strconv.ParseInt(string(header[5:]), 10, 64)
-	if version < 1 || version > 6 {
+	if version < 1 || version > 7 {
 		return fmt.Errorf("rdb: invalid RDB version number %d", version)
 	}
 
