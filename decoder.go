@@ -14,7 +14,7 @@
 
 package main
 
-import "github.com/cupcake/rdb/nopdecoder"
+import "github.com/dongmx/rdb/nopdecoder"
 import "strconv"
 
 // Entry is info of a redis recored
