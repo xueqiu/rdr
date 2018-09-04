@@ -48,7 +48,7 @@ USAGE:
 
 [OSX Download](http://ohjw7fr2u.bkt.clouddn.com/rdr)
 
-After downloading meybe need add permisson to execute.
+After downloading maybe need add permisson to execute.
 ```
 $ chmod a+x ./rdr
 ```
