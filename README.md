@@ -48,7 +48,10 @@ USAGE:
 
 [OSX Download](http://ohjw7fr2u.bkt.clouddn.com/rdr)
 
+[Windows Download](http://pb2xz7wd2.bkt.clouddn.com/rdr.exe)
+
 After downloading maybe need add permisson to execute.
+
 ```
 $ chmod a+x ./rdr
 ```

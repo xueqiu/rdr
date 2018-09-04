@@ -24,7 +24,7 @@ import (
 
 	"path/filepath"
 
-	"github.com/cupcake/rdb"
+	"github.com/dongmx/rdb"
 	"github.com/elazarl/go-bindata-assetfs"
 	"github.com/julienschmidt/httprouter"
 	"github.com/xueqiu/rdr/static"
@@ -87,7 +87,7 @@ func show(c *cli.Context) {
 	router.ServeFiles("/static/*filepath", &staticFS)
 	router.GET("/", index)
 	router.GET("/instance/:path", rdbReveal)
-	fmt.Fprintln(c.App.Writer, "parsing finished, please access http://127.0.0.1:"+c.String("port"))
+	fmt.Fprintln(c.App.Writer, "parsing finished, please access http://{$IP}:"+c.String("port"))
 	listenErr := http.ListenAndServe(":"+c.String("port"), router)
 	if listenErr != nil {
 		fmt.Fprintf(c.App.ErrWriter, "Listen port err: %v\n", listenErr)
