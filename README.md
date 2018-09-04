@@ -50,7 +50,8 @@ USAGE:
 
 [Windows Download](http://pb2xz7wd2.bkt.clouddn.com/rdr.exe)
 
-After downloading meybe need add permisson to execute.
+After downloading maybe need add permisson to execute.
+
 ```
 $ chmod a+x ./rdr
 ```
