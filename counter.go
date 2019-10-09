@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/xueqiu/rdr/decoder"
+	"github.com/YongHaoWu/rdr/decoder"
 )
 
 // NewCounter return a pointer of Counter

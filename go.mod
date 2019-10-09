@@ -1,4 +1,4 @@
-module github.com/xueqiu/rdr
+module github.com/YongHaoWu/rdr
 
 go 1.13
 

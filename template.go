@@ -24,7 +24,7 @@ import (
 	"strings"
 
 	"github.com/dustin/go-humanize"
-	"github.com/xueqiu/rdr/views"
+	"github.com/YongHaoWu/rdr/views"
 )
 
 var (
