@@ -44,16 +44,16 @@ USAGE:
    rdr keys FILE1 [FILE2] [FILE3]...
 ```
 
-[Linux amd64 Download](http://ohjx11q65.bkt.clouddn.com/rdr)
+[Linux amd64 Download](https://github.com/xueqiu/rdr/releases/download/v0.0.1/rdr-linux)
 
-[OSX Download](http://ohjw7fr2u.bkt.clouddn.com/rdr)
+[OSX Download](https://github.com/xueqiu/rdr/releases/download/v0.0.1/rdr-darwin)
 
-[Windows Download](http://pb2xz7wd2.bkt.clouddn.com/rdr.exe)
+[Windows Download](https://github.com/xueqiu/rdr/releases/download/v0.0.1/rdr-windows.exe)
 
 After downloading maybe need add permisson to execute.
 
 ```
-$ chmod a+x ./rdr
+$ chmod a+x ./rdr*
 ```
 
 ## Exapmle
@@ -61,7 +61,7 @@ $ chmod a+x ./rdr
 $ ./rdr show -p 8080 *.rdb
 ```
 Note that the memory usage is approximate.
-![show example](http://ohjx11q65.bkt.clouddn.com/example.png)
+![show example](https://yqfile.alicdn.com/img_9bc93fc3a6b976fdf862c8314e34f454.png)
 
 ```
 $ ./rdr keys example.rdb
