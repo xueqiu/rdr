@@ -24,17 +24,19 @@ import (
 
 	"path/filepath"
 
-	"github.com/dongmx/rdb"
-	"github.com/elazarl/go-bindata-assetfs"
-	"github.com/julienschmidt/httprouter"
-	"github.com/xueqiu/rdr/static"
 	"encoding/json"
+
+	"github.com/dongmx/rdb"
+	assetfs "github.com/elazarl/go-bindata-assetfs"
+	"github.com/julienschmidt/httprouter"
+	"github.com/xueqiu/rdr/decoder"
+	"github.com/xueqiu/rdr/static"
 )
 
 //go:generate go-bindata -prefix "static/" -o=static/static.go -pkg=static -ignore static.go static/...
 //go:generate go-bindata -prefix "views/" -o=views/views.go -pkg=views -ignore views.go views/...
 
-func decode(c *cli.Context, decoder *Decoder, filepath string) {
+func decode(c *cli.Context, decoder *decoder.Decoder, filepath string) {
 	f, err := os.Open(filepath)
 	if err != nil {
 		fmt.Fprintf(c.App.ErrWriter, "open rdbfile err: %v\n", err)
@@ -99,7 +101,7 @@ func dump(cli *cli.Context) {
 	nargs := cli.NArg()
 	for i := 0; i < nargs; i++ {
 		file := cli.Args().Get(i)
-		decoder := NewDecoder()
+		decoder := decoder.NewDecoder()
 		go decode(cli, decoder, file)
 		cnt := NewCounter()
 		cnt.Count(decoder.Entries)
@@ -128,7 +130,7 @@ func show(c *cli.Context) {
 	fmt.Fprintln(c.App.Writer, "start parsing...")
 	instances := []string{}
 	for _, file := range c.Args() {
-		decoder := NewDecoder()
+		decoder := decoder.NewDecoder()
 		go decode(c, decoder, file)
 		counter := NewCounter()
 		counter.Count(decoder.Entries)
@@ -169,7 +171,7 @@ func keys(c *cli.Context) {
 		return
 	}
 	for _, filepath := range c.Args() {
-		decoder := NewDecoder()
+		decoder := decoder.NewDecoder()
 		go decode(c, decoder, filepath)
 		for e := range decoder.Entries {
 			fmt.Fprintf(c.App.Writer, "%v\n", e.Key)
@@ -186,10 +188,10 @@ func main() {
 	app.ErrWriter = os.Stderr
 	app.Commands = []cli.Command{
 		cli.Command{
-		    Name: "dump",
-		    Usage: "dump statistical information of rdbfile to STDOUT",
-		    ArgsUsage: "FILE1 [FILE2] [FILE3]...",
-		    Action: dump,
+			Name:      "dump",
+			Usage:     "dump statistical information of rdbfile to STDOUT",
+			ArgsUsage: "FILE1 [FILE2] [FILE3]...",
+			Action:    dump,
 		},
 		cli.Command{
 			Name:      "show",
@@ -217,4 +219,3 @@ func main() {
 	}
 	app.Run(os.Args)
 }
-

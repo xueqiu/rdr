@@ -12,10 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package decoder
 
-import "github.com/dongmx/rdb/nopdecoder"
-import "strconv"
+import (
+	"strconv"
+
+	"github.com/dongmx/rdb/nopdecoder"
+)
 
 // Entry is info of a redis recored
 type Entry struct {
