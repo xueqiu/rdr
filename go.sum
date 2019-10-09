@@ -8,6 +8,11 @@ github.com/elazarl/go-bindata-assetfs v0.0.0-20160822204401-9a6736ed45b4 h1:Jg5/
 github.com/elazarl/go-bindata-assetfs v0.0.0-20160822204401-9a6736ed45b4/go.mod h1:v+YaWX3bdea5J/mo8dSETolEo7R71Vk1u8bnjau5yw4=
 github.com/julienschmidt/httprouter v1.1.1-0.20161023144033-4563b0ba73e4 h1:4w0uDgA8KPQzcxp2U/EF365uHNTEgBSr1AE5TdVpzF0=
 github.com/julienschmidt/httprouter v1.1.1-0.20161023144033-4563b0ba73e4/go.mod h1:SYymIcj16QtmaHHD7aYtjjsJG7VTCxuUUipMqKk8s4w=
+github.com/kr/pretty v0.1.0 h1:L/CwN0zerZDmRFUapSPitk6f+Q3+0za1rQkzVuMiMFI=
+github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
+github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
+github.com/kr/text v0.1.0 h1:45sCR5RtlFHMR4UwH9sdQ5TC8v0qDQCHnXt+kaKSTVE=
+github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
 github.com/pkg/errors v0.8.1-0.20180311214515-816c9085562c h1:SZvPVPsWE261bl8uxQ6Siq+ExNmYomz4CTU9E0ALgj4=
 github.com/pkg/errors v0.8.1-0.20180311214515-816c9085562c/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
@@ -16,3 +21,5 @@ github.com/stretchr/testify v1.1.5-0.20170130113145-4d4bfba8f1d1 h1:lw5Afd+fyvHj
 github.com/stretchr/testify v1.1.5-0.20170130113145-4d4bfba8f1d1/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/urfave/cli v1.19.2-0.20170215051705-2526b57c56f3 h1:aLFlkys2/c3jUVHyHhPeQjC5TZ8TtxHZhq5b7qpm0QE=
 github.com/urfave/cli v1.19.2-0.20170215051705-2526b57c56f3/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijbERA=
+gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 h1:YR8cESwS4TdDjEe65xsg0ogRM/Nc3DYOhEAlW+xobZo=
+gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
