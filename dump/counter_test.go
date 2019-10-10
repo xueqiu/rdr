@@ -12,16 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package dump
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/xueqiu/rdr/decoder"
 )
 
 func TestGetLargestKeyPrefixes(t *testing.T) {
-	e := &Entry{
+	e := &decoder.Entry{
 		Key:                "RELATIONSFOLLOWERIDS6420000664",
 		Bytes:              1,
 		Type:               "sortedset",

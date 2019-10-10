@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package dump
 
 import (
 	"bytes"
@@ -34,7 +34,7 @@ var (
 	isFirst       = true
 )
 
-func initHTMLTmpl() {
+func InitHTMLTmpl() {
 	// init function maps
 	tplFuncMap["isFirst"] = func() bool { res := isFirst; isFirst = false; return res }
 	tplFuncMap["clearFirst"] = func() bool { isFirst = true; return isFirst }
