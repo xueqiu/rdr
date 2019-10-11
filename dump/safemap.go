@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // This code is mostly copied from Beego BeeMap
-package main
+package dump
 
 import (
 	"encoding/json"
