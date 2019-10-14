@@ -2,8 +2,13 @@ package dump
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
+	"path"
 	"path/filepath"
+	"time"
 
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"github.com/julienschmidt/httprouter"
@@ -13,6 +18,27 @@ import (
 )
 
 var counters = NewSafeMap()
+
+func listPathFiles(pathname string) []string {
+	var filenames []string
+	fi, err := os.Lstat(pathname) // For read access.
+	if err != nil {
+		return filenames
+	}
+	if fi.IsDir() {
+		files, err := ioutil.ReadDir(pathname)
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, f := range files {
+			name := path.Join(pathname, f.Name())
+			filenames = append(filenames, name)
+		}
+	} else {
+		filenames = append(filenames, pathname)
+	}
+	return filenames
+}
 
 // Show parse rdbfile(s) and show statistical information by html
 func Show(c *cli.Context) {
@@ -25,21 +51,33 @@ func Show(c *cli.Context) {
 	// parse rdbfile
 	fmt.Fprintln(c.App.Writer, "start parsing...")
 	instances := []string{}
-	for _, file := range c.Args() {
-		decoder := decoder.NewDecoder()
-		go Decode(c, decoder, file)
-		counter := NewCounter()
-		counter.Count(decoder.Entries)
-		filename := filepath.Base(file)
-		counters.Set(filename, counter)
-		instances = append(instances, filename)
-		fmt.Fprintf(c.App.Writer, "parse %v  done\n", file)
-	}
+	counter := NewCounter()
+	go func() {
+		for {
+			for _, pathname := range c.Args() {
+				for _, v := range listPathFiles(pathname) {
+					filename := filepath.Base(v)
 
-	// init html template
-	// init common data in template
-	InitHTMLTmpl()
-	tplCommonData["Instances"] = instances
+					if !counters.Check(filename) {
+						decoder := decoder.NewDecoder()
+						fmt.Fprintf(c.App.Writer, "start to parse %v \n", filename)
+						go Decode(c, decoder, v)
+						counter.Count(decoder.Entries)
+						counters.Set(filename, counter)
+						fmt.Fprintf(c.App.Writer, "parse %v  done\n", filename)
+
+						instances = append(instances, filename)
+						// init html template
+						// init common data in template
+						InitHTMLTmpl()
+						tplCommonData["Instances"] = instances
+					}
+				}
+
+			}
+			time.Sleep(5 * time.Second)
+		}
+	}()
 
 	// start http server
 	staticFS := assetfs.AssetFS{
