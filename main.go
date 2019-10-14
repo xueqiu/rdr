@@ -62,7 +62,7 @@ func main() {
 		cli.Command{
 			Name:      "show",
 			Usage:     "show statistical information of rdbfile by webpage",
-			ArgsUsage: "FILE1 [FILE2] [FILE3]...",
+			ArgsUsage: "DIR1 [DIR2] [DIR3] or FILE1 [FILE2] [FILE3]...",
 			Flags: []cli.Flag{
 				cli.UintFlag{
 					Name:  "port, p",
