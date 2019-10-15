@@ -33,6 +33,6 @@ func TestGetLargestKeyPrefixes(t *testing.T) {
 	c.countByKeyPrefix(e)
 	c.calcuLargestKeyPrefix(1)
 	for _, p := range c.GetLargestKeyPrefixes() {
-		assert.Equal(t, "RELATIONSFOLLOWERIDS", p.Key)
+		assert.Equal(t, "RELATIONSFOLLOWERIDS0000000000", p.Key)
 	}
 }
