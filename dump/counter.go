@@ -12,13 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package dump
 
 import (
 	"container/heap"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/xueqiu/rdr/decoder"
 )
 
 // NewCounter return a pointer of Counter
@@ -64,7 +66,7 @@ type Counter struct {
 }
 
 // Count by various dimensions
-func (c *Counter) Count(in <-chan *Entry) {
+func (c *Counter) Count(in <-chan *decoder.Entry) {
 	for e := range in {
 		c.count(e)
 	}
@@ -73,8 +75,8 @@ func (c *Counter) Count(in <-chan *Entry) {
 }
 
 // GetLargestEntries from heap, num max is 500
-func (c *Counter) GetLargestEntries(num int) []*Entry {
-	res := []*Entry{}
+func (c *Counter) GetLargestEntries(num int) []*decoder.Entry {
+	res := []*decoder.Entry{}
 
 	// get a copy of c.largestEntries
 	for i := 0; i < c.largestEntries.Len(); i++ {
@@ -117,14 +119,14 @@ func (c *Counter) GetLenLevelCount() []*PrefixEntry {
 	return res
 }
 
-func (c *Counter) count(e *Entry) {
+func (c *Counter) count(e *decoder.Entry) {
 	c.countLargestEntries(e, 500)
 	c.countByType(e)
 	c.countByLength(e)
 	c.countByKeyPrefix(e)
 }
 
-func (c *Counter) countLargestEntries(e *Entry, num int) {
+func (c *Counter) countLargestEntries(e *decoder.Entry, num int) {
 	heap.Push(c.largestEntries, e)
 	l := c.largestEntries.Len()
 	if l > num {
@@ -132,13 +134,13 @@ func (c *Counter) countLargestEntries(e *Entry, num int) {
 	}
 }
 
-func (c *Counter) countByLength(e *Entry) {
+func (c *Counter) countByLength(e *decoder.Entry) {
 	key := typeKey{
 		Type: e.Type,
 		Key:  strconv.FormatUint(c.lengthLevel0, 10),
 	}
 
-	add := func(c *Counter, key typeKey, e *Entry) {
+	add := func(c *Counter, key typeKey, e *decoder.Entry) {
 		c.lengthLevelBytes[key] += e.Bytes
 		c.lengthLevelNum[key]++
 	}
@@ -162,12 +164,12 @@ func (c *Counter) countByLength(e *Entry) {
 	}
 }
 
-func (c *Counter) countByType(e *Entry) {
+func (c *Counter) countByType(e *decoder.Entry) {
 	c.typeNum[e.Type]++
 	c.typeBytes[e.Type] += e.Bytes
 }
 
-func (c *Counter) countByKeyPrefix(e *Entry) {
+func (c *Counter) countByKeyPrefix(e *decoder.Entry) {
 	// reset all numbers to 0
 	k := strings.Map(func(c rune) rune {
 		if c >= 48 && c <= 57 { //48 == "0" 57 == "9"
@@ -207,7 +209,7 @@ func (c *Counter) calcuLargestKeyPrefix(num int) {
 	}
 }
 
-type entryHeap []*Entry
+type entryHeap []*decoder.Entry
 
 func (h entryHeap) Len() int {
 	return len(h)
@@ -228,7 +230,7 @@ func (h *entryHeap) Pop() interface{} {
 }
 
 func (h *entryHeap) Push(e interface{}) {
-	*h = append(*h, e.(*Entry))
+	*h = append(*h, e.(*decoder.Entry))
 }
 
 type typeKey struct {
