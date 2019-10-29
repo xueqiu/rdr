@@ -51,7 +51,7 @@ func Show(c *cli.Context) {
 	// parse rdbfile
 	fmt.Fprintln(c.App.Writer, "start parsing...")
 	instances := []string{}
-	counter := NewCounter()
+	InitHTMLTmpl()
 	go func() {
 		for {
 			for _, pathname := range c.Args() {
@@ -62,6 +62,7 @@ func Show(c *cli.Context) {
 						decoder := decoder.NewDecoder()
 						fmt.Fprintf(c.App.Writer, "start to parse %v \n", filename)
 						go Decode(c, decoder, v)
+						counter := NewCounter()
 						counter.Count(decoder.Entries)
 						counters.Set(filename, counter)
 						fmt.Fprintf(c.App.Writer, "parse %v  done\n", filename)
@@ -69,7 +70,6 @@ func Show(c *cli.Context) {
 						instances = append(instances, filename)
 						// init html template
 						// init common data in template
-						InitHTMLTmpl()
 						tplCommonData["Instances"] = instances
 					}
 				}
