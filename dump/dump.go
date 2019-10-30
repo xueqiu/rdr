@@ -19,12 +19,12 @@ func Dump(path string) (map[string]interface{}, error) {
 		f, err := os.Open(path)
 		defer close(decoder.Entries)
 		if err != nil {
-			fmt.Println("open rdbfile err: %v\n", err)
+			fmt.Printf("open rdbfile err: %v\n", err)
 			return
 		}
 		err = rdb.Decode(f, decoder)
 		if err != nil {
-			fmt.Println("decode rdbfile err: %v\n", err)
+			fmt.Printf("decode rdbfile err: %v\n", err)
 			return
 		}
 	}()
@@ -35,8 +35,8 @@ func Dump(path string) (map[string]interface{}, error) {
 	return data, nil
 }
 
-// DumpToCliWriter dump rdb file statistical information to STDOUT.
-func DumpToCliWriter(cli *cli.Context) {
+// ToCliWriter dump rdb file statistical information to STDOUT.
+func ToCliWriter(cli *cli.Context) {
 	if cli.NArg() < 1 {
 		fmt.Fprintln(cli.App.ErrWriter, " requires at least 1 argument")
 		return
@@ -64,6 +64,7 @@ func DumpToCliWriter(cli *cli.Context) {
 	fmt.Fprintln(cli.App.Writer, "]")
 }
 
+// Decode ...
 func Decode(c *cli.Context, decoder *decoder.Decoder, filepath string) {
 	f, err := os.Open(filepath)
 	if err != nil {

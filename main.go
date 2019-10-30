@@ -57,7 +57,7 @@ func main() {
 			Name:      "dump",
 			Usage:     "dump statistical information of rdbfile to STDOUT",
 			ArgsUsage: "FILE1 [FILE2] [FILE3]...",
-			Action:    dump.DumpToCliWriter,
+			Action:    dump.ToCliWriter,
 		},
 		cli.Command{
 			Name:      "show",
