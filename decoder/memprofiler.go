@@ -95,9 +95,19 @@ func (m *MemProfiler) HashtableOverhead(size uint64) uint64 {
 
 // HashtableEntryOverhead get memory use of hashtable entry
 // See  https://github.com/antirez/redis/blob/unstable/src/dict.h
-// Each dictEntry has 2 pointers + int64
+// Each dictEntry has 3 pointers
+// typedef struct dictEntry {
+//     void *key;
+//     union {
+//         void *val;
+//         uint64_t u64;
+//         int64_t s64;
+//         double d;
+//     } v;
+//     struct dictEntry *next;
+// } dictEntry;
 func (m *MemProfiler) HashtableEntryOverhead() uint64 {
-	return 2*pointerSize + 8
+	return 3 * pointerSize
 }
 
 // LinkedlistOverhead get memory use of a linked list
@@ -136,8 +146,17 @@ func (m *MemProfiler) KeyExpiryOverhead(expiry int64) uint64 {
 }
 
 // RobjOverhead get memory useage of a robj
+// typedef struct redisobject {
+//     unsigned type:4;
+//     unsigned encoding:4;
+//     unsigned lru:lru_bits; /* lru time (relative to server.lruclock) */
+//     int refcount;
+//     void *ptr;
+// } robj;
+const LRU_BITS = 24
+
 func (m *MemProfiler) RobjOverhead() uint64 {
-	return pointerSize + 8
+	return pointerSize + 4 + 4 + LRU_BITS + 4
 }
 
 // SizeofString get memory use of a string
