@@ -53,6 +53,8 @@ func ToCliWriter(cli *cli.Context) {
 		cnt.Count(decoder.Entries)
 		filename := filepath.Base(file)
 		data := getData(filename, cnt)
+		data["MemoryUse"] = decoder.GetUsedMem()
+		data["CTime"] = decoder.GetTimestamp()
 		jsonBytes, _ := json.MarshalIndent(data, "", "    ")
 		fmt.Fprint(cli.App.Writer, string(jsonBytes))
 		if i == nargs-1 {

@@ -74,8 +74,8 @@ func (m *MemProfiler) mallocOverhead(size uint64) uint64 {
 // TopLevelObjOverhead get memory use of a top level object
 // Each top level object is an entry in a dictionary, and so we have to include
 // the overhead of a dictionary entry
-func (m *MemProfiler) TopLevelObjOverhead() uint64 {
-	return m.HashtableEntryOverhead()
+func (m *MemProfiler) TopLevelObjOverhead(key []byte, expiry int64) uint64 {
+	return m.HashtableEntryOverhead() + m.SizeofString(key) + m.RobjOverhead() + m.KeyExpiryOverhead(expiry)
 }
 
 // HashtableOverhead get memory use of a hashtable
@@ -91,6 +91,28 @@ func (m *MemProfiler) TopLevelObjOverhead() uint64 {
 // the size of **table by 1.5
 func (m *MemProfiler) HashtableOverhead(size uint64) uint64 {
 	return 4 + 7*longSize + 4*pointerSize + nextPower(size)*pointerSize*3/2
+}
+
+func (m *MemProfiler) SizeofStreamRadixTree(numElements uint64) uint64 {
+	numNodes := uint64(float64(numElements) * 2.5)
+	return 16 * numElements + numNodes * 4 + numNodes * 30 * 8
+}
+
+func (m *MemProfiler) StreamOverhead() uint64 {
+	return 2 * pointerSize + 8 + 16 + // stream struct
+		pointerSize + 8 * 2 // rax struct
+}
+
+func (m *MemProfiler) StreamConsumer(name []byte) uint64 {
+	return pointerSize * 2 + 8 + m.SizeofString(name)
+}
+
+func (m *MemProfiler) StreamCG() uint64 {
+	return pointerSize * 2 + 16
+}
+
+func (m *MemProfiler) StreamNACK(length uint64) uint64 {
+	return length * (pointerSize + 8 + 8)
 }
 
 // HashtableEntryOverhead get memory use of hashtable entry
@@ -132,6 +154,49 @@ func (m *MemProfiler) SkiplistOverhead(size uint64) uint64 {
 // SkiplistEntryOverhead get memory use of a skiplist entry
 func (m *MemProfiler) SkiplistEntryOverhead() uint64 {
 	return m.HashtableEntryOverhead() + 2*pointerSize + 8 + (pointerSize+8)*zsetRandLevel()
+}
+
+func (m *MemProfiler) QuicklistOverhead(size uint64) uint64 {
+	quicklist := 2 * pointerSize + 8 + 2 * 4
+	quickitem := 4 * pointerSize + 8 + 2 * 4
+	return quicklist + size * quickitem
+}
+
+func (m *MemProfiler) ZiplistHeaderOverhead() uint64 {
+	return 4 + 4 + 2 + 1
+}
+
+func (m *MemProfiler) ZiplistEntryOverhead(value []byte) uint64 {
+	header := 0
+	size := 0
+
+	if n, err := strconv.ParseInt(string(value), 10, 64); err == nil {
+		header = 1
+		switch {
+		case n < 12: size = 0
+		case n < 256: size = 1
+		case n < 65536: size = 2
+		case n < 16777216: size = 3
+		case n < 4294967296: size = 4
+		default:
+			size = 8
+		}
+	} else {
+		size = len(value)
+		if size <= 63 {
+			header = 1
+		} else if size <= 16383 {
+			header = 2
+		} else {
+			header = 5
+
+			if size >= 254 {
+				header += 5
+			}
+		}
+	}
+
+	return uint64(header + size)
 }
 
 // KeyExpiryOverhead get memory useage of a key expiry
