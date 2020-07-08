@@ -44,6 +44,8 @@ func NewCounter() *Counter {
 		typeBytes:          map[string]uint64{},
 		typeNum:            map[string]uint64{},
 		separators:         ":;,_- ",
+		slotBytes:          map[int]uint64{},
+		slotNum:            map[int]uint64{},
 	}
 }
 
@@ -63,6 +65,8 @@ type Counter struct {
 	separators         string
 	typeBytes          map[string]uint64
 	typeNum            map[string]uint64
+	slotBytes          map[int]uint64
+	slotNum            map[int]uint64
 }
 
 // Count by various dimensions
@@ -124,6 +128,7 @@ func (c *Counter) count(e *decoder.Entry) {
 	c.countByType(e)
 	c.countByLength(e)
 	c.countByKeyPrefix(e)
+	c.countBySlot(e)
 }
 
 func (c *Counter) countLargestEntries(e *decoder.Entry, num int) {
@@ -188,6 +193,15 @@ func (c *Counter) countByKeyPrefix(e *decoder.Entry) {
 		key.Key = prefix
 		c.keyPrefixBytes[key] += e.Bytes
 		c.keyPrefixNum[key]++
+	}
+}
+
+func (c *Counter) countBySlot(e *decoder.Entry) {
+	if len(e.Key) > 0 {
+		slot := Slot(e.Key)
+
+		c.slotNum[slot]++
+		c.slotBytes[slot] += e.Bytes
 	}
 }
 
@@ -338,4 +352,34 @@ func hasAnySuffix(s, suffix string) bool {
 		}
 	}
 	return false
+}
+
+// support for sorting of slots
+type SlotEntry struct {
+	Slot int
+	Size uint64
+}
+
+type slotHeap []*SlotEntry
+
+func (h slotHeap) Len() int {
+	return len(h)
+}
+func (h slotHeap) Less(i, j int) bool {
+	return h[i].Size > h[j].Size
+}
+func (h slotHeap) Swap(i, j int) {
+	h[i], h[j] = h[j], h[i]
+}
+
+func (h *slotHeap) Pop() interface{} {
+	old := *h
+	n := len(old)
+	x := old[n-1]
+	*h = old[0 : n-1]
+	return x
+}
+
+func (h *slotHeap) Push(e interface{}) {
+	*h = append(*h, e.(*SlotEntry))
 }

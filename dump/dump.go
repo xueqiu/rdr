@@ -1,6 +1,7 @@
 package dump
 
 import (
+	"container/heap"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -115,5 +116,43 @@ func getData(filename string, cnt *Counter) map[string]interface{} {
 		lenLevelCount[entry.Type] = append(lenLevelCount[entry.Type], entry)
 	}
 	data["LenLevelCount"] = lenLevelCount
+
+	var slotBytesHeap slotHeap
+	for slot, length := range cnt.slotBytes {
+		heap.Push(&slotBytesHeap, &SlotEntry{
+			Slot: slot, Size: length,
+		})
+	}
+
+	var slotSizeHeap slotHeap
+	for slot, size := range cnt.slotNum {
+		heap.Push(&slotSizeHeap, &SlotEntry{
+			Slot: slot, Size: size,
+		})
+	}
+
+	topN := 100
+	slotBytes := make(slotHeap, 0, topN)
+	slotNums := make(slotHeap, 0, topN)
+
+	for i := 0; i < topN; i++ {
+		continueFlag := false
+		if slotBytesHeap.Len() > 0 {
+			continueFlag = true
+			slotBytes = append(slotBytes, heap.Pop(&slotBytesHeap).(*SlotEntry))
+		}
+		if slotSizeHeap.Len() > 0 {
+			continueFlag = true
+			slotNums = append(slotNums, heap.Pop(&slotSizeHeap).(*SlotEntry))
+		}
+
+		if !continueFlag {
+			break
+		}
+	}
+
+	data["SlotBytes"] = slotBytes
+	data["SlotNums"] = slotNums
+
 	return data
 }
