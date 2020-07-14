@@ -15,6 +15,7 @@
 package dump
 
 import (
+	"container/heap"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,5 +36,28 @@ func TestGetLargestKeyPrefixes(t *testing.T) {
 	c.calcuLargestKeyPrefix(1)
 	for _, p := range c.GetLargestKeyPrefixes() {
 		assert.Equal(t, "RELATIONSFOLLOWERIDS0000000000", p.Key)
+	}
+}
+
+func TestSlotHeap(t *testing.T) {
+	var test slotHeap
+	                    //0  1  2  3  4  5  6
+	toBeSorts := []uint64{5, 7, 9, 6, 3, 1, 2}
+	expectedSlot := []int{2, 1, 3, 0, 4, 6, 5}
+
+	heap.Init(&test)
+	for slot, elemt := range toBeSorts {
+		heap.Push(&test, &SlotEntry{
+			Slot: slot,
+			Size: elemt,
+		})
+	}
+
+	for i := 0; test.Len() > 0; i++ {
+		e := heap.Pop(&test).(*SlotEntry)
+
+		if e.Slot != expectedSlot[i] {
+			t.Errorf("expect %d got %d at [%d](%d)", expectedSlot[i], e.Slot, i, e.Size)
+		}
 	}
 }
