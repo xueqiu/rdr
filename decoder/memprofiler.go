@@ -21,8 +21,8 @@ import (
 )
 
 var (
-	skiplistMaxLevel    = 32
-	skiplistP           = 0.25
+	skiplistMaxLevel = 32
+	// skiplistP           = 0.25
 	redisSharedInterges = int64(10000)
 	longSize            = uint64(8)
 	pointerSize         = uint64(8)
@@ -95,20 +95,20 @@ func (m *MemProfiler) HashtableOverhead(size uint64) uint64 {
 
 func (m *MemProfiler) SizeofStreamRadixTree(numElements uint64) uint64 {
 	numNodes := uint64(float64(numElements) * 2.5)
-	return 16 * numElements + numNodes * 4 + numNodes * 30 * 8
+	return 16*numElements + numNodes*4 + numNodes*30*8
 }
 
 func (m *MemProfiler) StreamOverhead() uint64 {
-	return 2 * pointerSize + 8 + 16 + // stream struct
-		pointerSize + 8 * 2 // rax struct
+	return 2*pointerSize + 8 + 16 + // stream struct
+		pointerSize + 8*2 // rax struct
 }
 
 func (m *MemProfiler) StreamConsumer(name []byte) uint64 {
-	return pointerSize * 2 + 8 + m.SizeofString(name)
+	return pointerSize*2 + 8 + m.SizeofString(name)
 }
 
 func (m *MemProfiler) StreamCG() uint64 {
-	return pointerSize * 2 + 16
+	return pointerSize*2 + 16
 }
 
 func (m *MemProfiler) StreamNACK(length uint64) uint64 {
@@ -157,9 +157,9 @@ func (m *MemProfiler) SkiplistEntryOverhead() uint64 {
 }
 
 func (m *MemProfiler) QuicklistOverhead(size uint64) uint64 {
-	quicklist := 2 * pointerSize + 8 + 2 * 4
-	quickitem := 4 * pointerSize + 8 + 2 * 4
-	return quicklist + size * quickitem
+	quicklist := 2*pointerSize + 8 + 2*4
+	quickitem := 4*pointerSize + 8 + 2*4
+	return quicklist + size*quickitem
 }
 
 func (m *MemProfiler) ZiplistHeaderOverhead() uint64 {
@@ -173,11 +173,16 @@ func (m *MemProfiler) ZiplistEntryOverhead(value []byte) uint64 {
 	if n, err := strconv.ParseInt(string(value), 10, 64); err == nil {
 		header = 1
 		switch {
-		case n < 12: size = 0
-		case n < 256: size = 1
-		case n < 65536: size = 2
-		case n < 16777216: size = 3
-		case n < 4294967296: size = 4
+		case n < 12:
+			size = 0
+		case n < 256:
+			size = 1
+		case n < 65536:
+			size = 2
+		case n < 16777216:
+			size = 3
+		case n < 4294967296:
+			size = 4
 		default:
 			size = 8
 		}

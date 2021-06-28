@@ -44,7 +44,7 @@ func listPathFiles(pathname string) []string {
 func Show(c *cli.Context) {
 	if c.NArg() < 1 {
 		fmt.Fprintln(c.App.ErrWriter, "show requires at least 1 argument")
-		cli.ShowCommandHelp(c, "show")
+		cli.ShowCommandHelp(c, "show") // nolint
 		return
 	}
 
@@ -61,7 +61,7 @@ func Show(c *cli.Context) {
 					if !counters.Check(filename) {
 						decoder := decoder.NewDecoder()
 						fmt.Fprintf(c.App.Writer, "start to parse %v \n", filename)
-						go Decode(c, decoder, v)
+						go Decode(decoder, v, c.App.Writer)
 						counter := NewCounter()
 						counter.Count(decoder.Entries)
 						counters.Set(filename, counter)

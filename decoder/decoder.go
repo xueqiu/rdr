@@ -40,7 +40,7 @@ type Decoder struct {
 
 	usedMem int64
 	ctime   int64
-	count   int
+	// count   int
 	rdbVer int
 
 	currentInfo  *rdb.Info

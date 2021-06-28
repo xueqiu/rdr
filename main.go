@@ -15,11 +15,10 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/urfave/cli"
-
-	"fmt"
 
 	"github.com/xueqiu/rdr/decoder"
 	"github.com/xueqiu/rdr/dump"
@@ -33,12 +32,12 @@ import (
 func keys(c *cli.Context) {
 	if c.NArg() < 1 {
 		fmt.Fprintln(c.App.ErrWriter, "keys requires at least 1 argument")
-		cli.ShowCommandHelp(c, "keys")
+		cli.ShowCommandHelp(c, "keys") // nolint
 		return
 	}
 	for _, filepath := range c.Args() {
 		decoder := decoder.NewDecoder()
-		go dump.Decode(c, decoder, filepath)
+		go dump.Decode(decoder, filepath, c.App.Writer)
 		for e := range decoder.Entries {
 			fmt.Fprintf(c.App.Writer, "%v\n", e.Key)
 		}
@@ -81,7 +80,7 @@ func main() {
 	}
 	app.CommandNotFound = func(c *cli.Context, command string) {
 		fmt.Fprintf(c.App.ErrWriter, "command %q can not be found.\n", command)
-		cli.ShowAppHelp(c)
+		cli.ShowAppHelp(c) // nolint
 	}
-	app.Run(os.Args)
+	app.Run(os.Args) // nolint
 }

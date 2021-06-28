@@ -295,7 +295,7 @@ func (h *prefixHeap) Push(k interface{}) {
 	*h = append(*h, k.(*PrefixEntry))
 }
 
-func appendIfMissing(slice []int, i int) []int {
+func appendIfMissing(slice []int, i int) []int { // nolint: deadcode, unused
 	for _, ele := range slice {
 		if ele == i {
 			return slice

@@ -4,6 +4,7 @@ import (
 	"container/heap"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -38,18 +39,21 @@ func Dump(path string) (map[string]interface{}, error) {
 
 // ToCliWriter dump rdb file statistical information to STDOUT.
 func ToCliWriter(cli *cli.Context) {
-	if cli.NArg() < 1 {
-		fmt.Fprintln(cli.App.ErrWriter, " requires at least 1 argument")
+	ToWriter(cli.Args(), cli.App.Writer)
+}
+
+// ToWriter .
+func ToWriter(files []string, writer io.Writer) {
+	if len(files) < 1 {
+		fmt.Fprintln(writer, " requires at least 1 argument")
 		return
 	}
 
 	// parse rdbfile
-	fmt.Fprintln(cli.App.Writer, "[")
-	nargs := cli.NArg()
-	for i := 0; i < nargs; i++ {
-		file := cli.Args().Get(i)
+	fmt.Fprintln(writer, "[")
+	for i, file := range files {
 		decoder := decoder.NewDecoder()
-		go Decode(cli, decoder, file)
+		go Decode(decoder, file, writer)
 		cnt := NewCounter()
 		cnt.Count(decoder.Entries)
 		filename := filepath.Base(file)
@@ -57,27 +61,27 @@ func ToCliWriter(cli *cli.Context) {
 		data["MemoryUse"] = decoder.GetUsedMem()
 		data["CTime"] = decoder.GetTimestamp()
 		jsonBytes, _ := json.MarshalIndent(data, "", "    ")
-		fmt.Fprint(cli.App.Writer, string(jsonBytes))
-		if i == nargs-1 {
-			fmt.Fprintln(cli.App.Writer)
+		fmt.Fprint(writer, string(jsonBytes))
+		if i == len(files)-1 {
+			fmt.Fprintln(writer)
 		} else {
-			fmt.Fprintln(cli.App.Writer, ",")
+			fmt.Fprintln(writer, ",")
 		}
 	}
-	fmt.Fprintln(cli.App.Writer, "]")
+	fmt.Fprintln(writer, "]")
 }
 
 // Decode ...
-func Decode(c *cli.Context, decoder *decoder.Decoder, filepath string) {
+func Decode(decoder *decoder.Decoder, filepath string, writer io.Writer) {
 	f, err := os.Open(filepath)
 	if err != nil {
-		fmt.Fprintf(c.App.ErrWriter, "open rdbfile err: %v\n", err)
+		fmt.Fprintf(writer, "open rdbfile err: %v\n", err)
 		close(decoder.Entries)
 		return
 	}
 	err = rdb.Decode(f, decoder)
 	if err != nil {
-		fmt.Fprintf(c.App.ErrWriter, "decode rdbfile err: %v\n", err)
+		fmt.Fprintf(writer, "decode rdbfile err: %v\n", err)
 		close(decoder.Entries)
 		return
 	}
