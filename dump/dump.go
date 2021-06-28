@@ -32,7 +32,7 @@ func Dump(path string) (map[string]interface{}, error) {
 	cnt := NewCounter()
 	cnt.Count(decoder.Entries)
 	filename := filepath.Base(path)
-	data = getData(filename, cnt)
+	data = GetData(filename, cnt)
 	return data, nil
 }
 
@@ -53,7 +53,7 @@ func ToCliWriter(cli *cli.Context) {
 		cnt := NewCounter()
 		cnt.Count(decoder.Entries)
 		filename := filepath.Base(file)
-		data := getData(filename, cnt)
+		data := GetData(filename, cnt)
 		data["MemoryUse"] = decoder.GetUsedMem()
 		data["CTime"] = decoder.GetTimestamp()
 		jsonBytes, _ := json.MarshalIndent(data, "", "    ")
@@ -83,7 +83,7 @@ func Decode(c *cli.Context, decoder *decoder.Decoder, filepath string) {
 	}
 }
 
-func getData(filename string, cnt *Counter) map[string]interface{} {
+func GetData(filename string, cnt *Counter) map[string]interface{} {
 	data := make(map[string]interface{})
 	data["CurrentInstance"] = filename
 	data["LargestKeys"] = cnt.GetLargestEntries(100)
