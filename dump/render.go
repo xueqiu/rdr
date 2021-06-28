@@ -43,7 +43,7 @@ func rdbReveal(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	counter := c.(*Counter)
 
 	data["CurrentInstance"] = path
-	data["LargestKeys"] = counter.GetLargestEntries(100)
+	data["LargestKeys"] = counter.GetLargestEntries(100, 0)
 
 	largestKeyPrefixesByType := map[string][]*PrefixEntry{}
 	for _, entry := range counter.GetLargestKeyPrefixes() {

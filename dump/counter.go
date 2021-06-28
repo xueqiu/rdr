@@ -79,13 +79,15 @@ func (c *Counter) Count(in <-chan *decoder.Entry) {
 }
 
 // GetLargestEntries from heap, num max is 500
-func (c *Counter) GetLargestEntries(num int) []*decoder.Entry {
+func (c *Counter) GetLargestEntries(num, sizeThreshold int) []*decoder.Entry {
 	res := []*decoder.Entry{}
 
 	// get a copy of c.largestEntries
 	for i := 0; i < c.largestEntries.Len(); i++ {
 		entries := *c.largestEntries
-		res = append(res, entries[i])
+		if int(entries[i].Bytes) >= sizeThreshold {
+			res = append(res, entries[i])
+		}
 	}
 	sort.Sort(sort.Reverse(entryHeap(res)))
 	if num < len(res) {
