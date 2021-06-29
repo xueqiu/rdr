@@ -4,6 +4,7 @@ import (
 	"container/heap"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -32,61 +33,64 @@ func Dump(path string) (map[string]interface{}, error) {
 	cnt := NewCounter()
 	cnt.Count(decoder.Entries)
 	filename := filepath.Base(path)
-	data = getData(filename, cnt)
+	data = GetData(filename, cnt, 100, 0)
 	return data, nil
 }
 
 // ToCliWriter dump rdb file statistical information to STDOUT.
-func ToCliWriter(cli *cli.Context) {
-	if cli.NArg() < 1 {
-		fmt.Fprintln(cli.App.ErrWriter, " requires at least 1 argument")
+func ToCliWriter(cli *cli.Context, topN, sizeThreshold int) {
+	ToWriter(cli.Args(), cli.App.Writer, topN, sizeThreshold)
+}
+
+// ToWriter .
+func ToWriter(files []string, writer io.Writer, topN, sizeThreshold int) {
+	if len(files) < 1 {
+		fmt.Fprintln(writer, " requires at least 1 argument")
 		return
 	}
 
 	// parse rdbfile
-	fmt.Fprintln(cli.App.Writer, "[")
-	nargs := cli.NArg()
-	for i := 0; i < nargs; i++ {
-		file := cli.Args().Get(i)
+	fmt.Fprintln(writer, "[")
+	for i, file := range files {
 		decoder := decoder.NewDecoder()
-		go Decode(cli, decoder, file)
+		go Decode(decoder, file, writer)
 		cnt := NewCounter()
 		cnt.Count(decoder.Entries)
 		filename := filepath.Base(file)
-		data := getData(filename, cnt)
+		data := GetData(filename, cnt, topN, sizeThreshold)
 		data["MemoryUse"] = decoder.GetUsedMem()
 		data["CTime"] = decoder.GetTimestamp()
 		jsonBytes, _ := json.MarshalIndent(data, "", "    ")
-		fmt.Fprint(cli.App.Writer, string(jsonBytes))
-		if i == nargs-1 {
-			fmt.Fprintln(cli.App.Writer)
+		fmt.Fprint(writer, string(jsonBytes))
+		if i == len(files)-1 {
+			fmt.Fprintln(writer)
 		} else {
-			fmt.Fprintln(cli.App.Writer, ",")
+			fmt.Fprintln(writer, ",")
 		}
 	}
-	fmt.Fprintln(cli.App.Writer, "]")
+	fmt.Fprintln(writer, "]")
 }
 
 // Decode ...
-func Decode(c *cli.Context, decoder *decoder.Decoder, filepath string) {
+func Decode(decoder *decoder.Decoder, filepath string, writer io.Writer) {
 	f, err := os.Open(filepath)
 	if err != nil {
-		fmt.Fprintf(c.App.ErrWriter, "open rdbfile err: %v\n", err)
+		fmt.Fprintf(writer, "open rdbfile err: %v\n", err)
 		close(decoder.Entries)
 		return
 	}
 	err = rdb.Decode(f, decoder)
 	if err != nil {
-		fmt.Fprintf(c.App.ErrWriter, "decode rdbfile err: %v\n", err)
+		fmt.Fprintf(writer, "decode rdbfile err: %v\n", err)
 		close(decoder.Entries)
 		return
 	}
 }
 
-func getData(filename string, cnt *Counter) map[string]interface{} {
+func GetData(filename string, cnt *Counter, topN, sizeThreshold int) map[string]interface{} {
 	data := make(map[string]interface{})
 	data["CurrentInstance"] = filename
-	data["LargestKeys"] = cnt.GetLargestEntries(100)
+	data["LargestKeys"] = cnt.GetLargestEntries(topN, sizeThreshold)
 
 	largestKeyPrefixesByType := map[string][]*PrefixEntry{}
 	for _, entry := range cnt.GetLargestKeyPrefixes() {
@@ -131,7 +135,6 @@ func getData(filename string, cnt *Counter) map[string]interface{} {
 		})
 	}
 
-	topN := 100
 	slotBytes := make(slotHeap, 0, topN)
 	slotNums := make(slotHeap, 0, topN)
 
