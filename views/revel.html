@@ -80,6 +80,7 @@
                         <thead>
                             <tr>
                                 <td class="sorttable_alpha"> Key </td>
+                                <td class="sorttable_alpha"> Db </td>
                                 <td class="sorttable_alpha"> Type </td>
                                 <td class="sorttable_alpha"> Bytes </td>
                                 <td class="sorttable_numeric"> NumOfElement </td>
@@ -89,6 +90,7 @@
                             {{range $entry := .LargestKeys}}
                             <tr>
                                 <td>{{$entry.Key}}</td>
+                                <td>{{$entry.Db}}</td>
                                 <td>{{$entry.Type}}</td>
                                 <td>{{humanizeBytes $entry.Bytes}}</td>
                                 <td>{{humanizeComma $entry.NumOfElem}}</td>
@@ -119,6 +121,7 @@
                                     <thead>
                                         <tr>
                                             <td class="sorttable_alpha"> KeyPrefix </td>
+                                            <td class="sorttable_alpha"> Db </td>
                                             <td class="sorttable_alpha"> Bytes </td>
                                             <td class="sorttable_numeric"> NumberOfKey </td>
                                         </tr>
@@ -127,6 +130,7 @@
                                         {{range $entry := $entries}}
                                         <tr>
                                             <td>{{$entry.Key}}</td>
+                                            <td>{{$entry.Db}}</td>
                                             <td>{{humanizeBytes $entry.Bytes}}</td>
                                             <td>{{humanizeComma $entry.Num}}</td>
                                         </tr>

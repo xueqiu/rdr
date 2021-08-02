@@ -46,6 +46,7 @@ func NewCounter() *Counter {
 		separators:         ":;,_- ",
 		slotBytes:          map[int]uint64{},
 		slotNum:            map[int]uint64{},
+		keyPrefixDb:        map[typeKey]int{},
 	}
 }
 
@@ -67,6 +68,7 @@ type Counter struct {
 	typeNum            map[string]uint64
 	slotBytes          map[int]uint64
 	slotNum            map[int]uint64
+	keyPrefixDb        map[typeKey]int
 }
 
 // Count by various dimensions
@@ -118,6 +120,7 @@ func (c *Counter) GetLenLevelCount() []*PrefixEntry {
 		entry.Key = key.Key
 		entry.Bytes = c.lengthLevelBytes[key]
 		entry.Num = c.lengthLevelNum[key]
+		entry.Db = c.keyPrefixDb[key]
 		res = append(res, entry)
 	}
 	return res
@@ -129,6 +132,15 @@ func (c *Counter) count(e *decoder.Entry) {
 	c.countByLength(e)
 	c.countByKeyPrefix(e)
 	c.countBySlot(e)
+	c.countByDb(e)
+}
+
+func (c *Counter) countByDb(e *decoder.Entry) {
+	key := typeKey{
+		Type: e.Type,
+		Key:  e.Key,
+	}
+	c.keyPrefixDb[key] = e.Db
 }
 
 func (c *Counter) countLargestEntries(e *decoder.Entry, num int) {
@@ -212,6 +224,7 @@ func (c *Counter) calcuLargestKeyPrefix(num int) {
 		k.Key = key.Key
 		k.Bytes = c.keyPrefixBytes[key]
 		k.Num = c.keyPrefixNum[key]
+		k.Db = c.keyPrefixDb[key]
 		delete(c.keyPrefixBytes, key)
 		delete(c.keyPrefixNum, key)
 
@@ -259,6 +272,7 @@ type PrefixEntry struct {
 	typeKey
 	Bytes uint64
 	Num   uint64
+	Db    int
 }
 
 func (h prefixHeap) Len() int {
