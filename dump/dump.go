@@ -43,7 +43,7 @@ func ToCliWriter(cli *cli.Context) {
 		return
 	}
 
-	// parse rdbfile
+	// parse rdb file
 	fmt.Fprintln(cli.App.Writer, "[")
 	nargs := cli.NArg()
 	for i := 0; i < nargs; i++ {
@@ -108,8 +108,8 @@ func getData(filename string, cnt *Counter) map[string]interface{} {
 	for _, v := range cnt.typeBytes {
 		totalBytes += v
 	}
-	data["TotleNum"] = totalNum
-	data["TotleBytes"] = totalBytes
+	data["TotalNum"] = totalNum
+	data["TotalBytes"] = totalBytes
 
 	lenLevelCount := map[string][]*PrefixEntry{}
 	for _, entry := range cnt.GetLenLevelCount() {
