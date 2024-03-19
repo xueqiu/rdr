@@ -45,20 +45,20 @@ func ToCliWriter(cli *cli.Context) {
 
 	// parse rdb file
 	fmt.Fprintln(cli.App.Writer, "[")
-	nargs := cli.NArg()
-	for i := 0; i < nargs; i++ {
+	nArgs := cli.NArg()
+	for i := 0; i < nArgs; i++ {
 		file := cli.Args().Get(i)
-		decoder := decoder.NewDecoder()
-		go Decode(cli, decoder, file)
+		rdbDecoder := decoder.NewDecoder()
+		go Decode(cli, rdbDecoder, file)
 		cnt := NewCounter()
-		cnt.Count(decoder.Entries)
+		cnt.Count(rdbDecoder.Entries)
 		filename := filepath.Base(file)
 		data := getData(filename, cnt)
-		data["MemoryUse"] = decoder.GetUsedMem()
-		data["CTime"] = decoder.GetTimestamp()
+		data["MemoryUse"] = rdbDecoder.GetUsedMem()
+		data["CTime"] = rdbDecoder.GetTimestamp()
 		jsonBytes, _ := json.MarshalIndent(data, "", "    ")
 		fmt.Fprint(cli.App.Writer, string(jsonBytes))
-		if i == nargs-1 {
+		if i == nArgs-1 {
 			fmt.Fprintln(cli.App.Writer)
 		} else {
 			fmt.Fprintln(cli.App.Writer, ",")
