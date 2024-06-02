@@ -74,6 +74,14 @@ portfolio:stock_follower_count:ZH951803
 portfolio:stock_follower:ZH924804
 portfolio:stock_follower_count:INS104806
 ```
+## Develop
+
+```sh
+go install -v github.com/go-bindata/go-bindata/...
+go install -v github.com/elazarl/go-bindata-assetfs/...
+go generate
+go build
+```
 
 ## License
 

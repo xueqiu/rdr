@@ -65,9 +65,9 @@
         var pieConfig0 = JSON.parse(rawPieConfig);
         var pieConfig1 = JSON.parse(rawPieConfig);
         pieConfig0.options.title.text = "key number by type";
-        pieConfig0.options.elements.center.text = {{humanizeComma .TotleNum}}
+        pieConfig0.options.elements.center.text = {{humanizeComma .TotalNum}}
         pieConfig1.options.title.text = "memory used by type (byte)";
-        pieConfig1.options.elements.center.text = {{humanizeBytes .TotleBytes}}
+        pieConfig1.options.elements.center.text = {{humanizeBytes .TotalBytes}}
 
         {{range $type, $num := .TypeNum}}
         pieConfig0.data.datasets[0].data.push({{$num}});

@@ -57,16 +57,16 @@ func rdbReveal(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 
 	data["TypeBytes"] = counter.typeBytes
 	data["TypeNum"] = counter.typeNum
-	totleNum := uint64(0)
+	totalNum := uint64(0)
 	for _, v := range counter.typeNum {
-		totleNum += v
+		totalNum += v
 	}
-	totleBytes := uint64(0)
+	totalBytes := uint64(0)
 	for _, v := range counter.typeBytes {
-		totleBytes += v
+		totalBytes += v
 	}
-	data["TotleNum"] = totleNum
-	data["TotleBytes"] = totleBytes
+	data["TotalNum"] = totalNum
+	data["TotalBytes"] = totalBytes
 
 	lenLevelCount := map[string][]*PrefixEntry{}
 	for _, entry := range counter.GetLenLevelCount() {
