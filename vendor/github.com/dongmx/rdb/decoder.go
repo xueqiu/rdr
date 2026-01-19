@@ -11,13 +11,46 @@ import (
 	"strconv"
 
 	"github.com/dongmx/rdb/crc64"
-	"github.com/pkg/errors"
+	"github.com/juju/errors"
 )
+
+type Info struct {
+	Encoding    string
+	Idle        uint64
+	Freq        int
+	SizeOfValue int
+	Zips        uint64
+}
+
+type StreamPendingEntry struct {
+	ID            []byte
+	DeliveryTime  uint64
+	DeliveryCount uint64
+}
+
+type StreamConsumerPendingEntry struct {
+	ID []byte
+}
+
+type StreamConsumerData struct {
+	Name     []byte
+	SeenTime uint64
+	Pending  []*StreamConsumerPendingEntry
+}
+
+type StreamGroup struct {
+	Name        []byte
+	LastEntryId string
+	Pending     []*StreamPendingEntry
+	Consumers   []*StreamConsumerData
+}
+
+type StreamGroups []*StreamGroup
 
 // A Decoder must be implemented to parse a RDB file.
 type Decoder interface {
 	// StartRDB is called when parsing of a valid RDB file starts.
-	StartRDB()
+	StartRDB(ver int)
 	// StartDatabase is called when database n starts.
 	// Once a database starts, another database will not start until EndDatabase is called.
 	StartDatabase(n int)
@@ -26,39 +59,39 @@ type Decoder interface {
 	// ResizeDB hint
 	ResizeDatabase(dbSize, expiresSize uint32)
 	// Set is called once for each string key.
-	Set(key, value []byte, expiry int64)
+	Set(key, value []byte, expiry int64, info *Info)
 	// StartHash is called at the beginning of a hash.
 	// Hset will be called exactly length times before EndHash.
-	StartHash(key []byte, length, expiry int64)
+	StartHash(key []byte, length, expiry int64, info *Info)
 	// Hset is called once for each field=value pair in a hash.
 	Hset(key, field, value []byte)
 	// EndHash is called when there are no more fields in a hash.
 	EndHash(key []byte)
 	// StartSet is called at the beginning of a set.
 	// Sadd will be called exactly cardinality times before EndSet.
-	StartSet(key []byte, cardinality, expiry int64)
+	StartSet(key []byte, cardinality, expiry int64, info *Info)
 	// Sadd is called once for each member of a set.
 	Sadd(key, member []byte)
 	// EndSet is called when there are no more fields in a set.
 	EndSet(key []byte)
 	// StartStream is called at the beginning of a stream.
 	// Xadd will be called exactly length times before EndStream.
-	StartStream(key []byte, cardinality, expiry int64)
+	StartStream(key []byte, cardinality, expiry int64, info *Info)
 	// Xadd is called once for each id in a stream.
 	Xadd(key, id, listpack []byte)
 	// EndHash is called when there are no more fields in a hash.
-	EndStream(key []byte)
+	EndStream(key []byte, items uint64, lastEntryID string, cgroupsData StreamGroups)
 	// StartList is called at the beginning of a list.
 	// Rpush will be called exactly length times before EndList.
 	// If length of the list is not known, then length is -1
-	StartList(key []byte, length, expiry int64)
+	StartList(key []byte, length, expiry int64, info *Info)
 	// Rpush is called once for each value in a list.
 	Rpush(key, value []byte)
 	// EndList is called when there are no more values in a list.
 	EndList(key []byte)
 	// StartZSet is called at the beginning of a sorted set.
 	// Zadd will be called exactly cardinality times before EndZSet.
-	StartZSet(key []byte, cardinality, expiry int64)
+	StartZSet(key []byte, cardinality, expiry int64, info *Info)
 	// Zadd is called once for each member of a sorted set.
 	Zadd(key []byte, score float64, member []byte)
 	// EndZSet is called when there are no more members in a sorted set.
@@ -71,7 +104,7 @@ type Decoder interface {
 
 // Decode parses a RDB file from r and calls the decode hooks on d.
 func Decode(r io.Reader, d Decoder) error {
-	decoder := &decode{d, make([]byte, 8), bufio.NewReader(r)}
+	decoder := &decode{d, make([]byte, 8), bufio.NewReader(r), 0, 0, nil, 0}
 	return decoder.decode()
 }
 
@@ -81,18 +114,18 @@ func Decode(r io.Reader, d Decoder) error {
 func DecodeDump(dump []byte, db int, key []byte, expiry int64, d Decoder) error {
 	err := verifyDump(dump)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
-	decoder := &decode{d, make([]byte, 8), bytes.NewReader(dump[1:])}
-	decoder.event.StartRDB()
+	decoder := &decode{d, make([]byte, 8), bytes.NewReader(dump[1:]), 0, 0, nil, 0}
+	decoder.event.StartRDB(0)
 	decoder.event.StartDatabase(db)
 
 	err = decoder.readObject(key, ValueType(dump[0]), expiry)
 
 	decoder.event.EndDatabase(db)
 	decoder.event.EndRDB()
-	return err
+	return errors.Trace(err)
 }
 
 type byteReader interface {
@@ -104,6 +137,12 @@ type decode struct {
 	event  Decoder
 	intBuf []byte
 	r      byteReader
+
+	lruIdle uint64
+	lfuFreq int
+
+	info       *Info
+	rdbVersion int
 }
 
 // ValueType of redis type
@@ -220,63 +259,64 @@ const (
 func (d *decode) decode() error {
 	err := d.checkHeader()
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
-	d.event.StartRDB()
+	d.event.StartRDB(d.rdbVersion)
 	var db uint64
 	var expiry int64
 	//var lruClock int64
-	var lruIdle uint64
-	var lfuFreq int
 	firstDB := true
 	for {
+		d.lruIdle = 0
+		d.lfuFreq = 0
+
 		objType, err := d.r.ReadByte()
 		if err != nil {
-			return errors.Wrap(err, "readfailed")
+			return errors.Wrap(err, errors.New("readfailed"))
 		}
 		switch objType {
 		case rdbOpCodeFreq:
 			b, err := d.r.ReadByte()
-			lfuFreq = int(b)
+			d.lfuFreq = int(b)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 		case rdbOpCodeIdle:
 			idle, _, err := d.readLength()
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
-			lruIdle = uint64(idle)
+			d.lruIdle = uint64(idle)
 		case rdbOpCodeAux:
 			auxKey, err := d.readString()
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 			auxVal, err := d.readString()
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 			d.event.Aux(auxKey, auxVal)
 		case rdbOpCodeResizeDB:
 			dbSize, _, err := d.readLength()
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 			expiresSize, _, err := d.readLength()
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 			d.event.ResizeDatabase(uint32(dbSize), uint32(expiresSize))
 		case rdbOpCodeExpiryMS:
 			_, err := io.ReadFull(d.r, d.intBuf)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 			expiry = int64(binary.LittleEndian.Uint64(d.intBuf))
 		case rdbOpCodeExpiry:
 			_, err := io.ReadFull(d.r, d.intBuf[:4])
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 			expiry = int64(binary.LittleEndian.Uint32(d.intBuf)) * 1000
 		case rdbOpCodeSelectDB:
@@ -285,7 +325,7 @@ func (d *decode) decode() error {
 			}
 			db, _, err = d.readLength()
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 			d.event.StartDatabase(int(db))
 		case rdbOpCodeEOF:
@@ -293,44 +333,47 @@ func (d *decode) decode() error {
 			d.event.EndRDB()
 			return nil
 		case rdbOpCodeModuleAux:
-
+			return errors.Errorf("unsupport module")
 		default:
 			key, err := d.readString()
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 			err = d.readObject(key, ValueType(objType), expiry)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
-			_, _ = lfuFreq, lruIdle
 			expiry = 0
-			lfuFreq = 0
-			lruIdle = 0
 		}
 	}
 
 }
 
 func (d *decode) readObject(key []byte, typ ValueType, expiry int64) error {
+	d.info = &Info{
+		Idle: d.lruIdle,
+		Freq: d.lfuFreq,
+	}
 	switch typ {
 	case TypeString:
 		value, err := d.readString()
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
-		d.event.Set(key, value, expiry)
+		d.info.Encoding = "string"
+		d.event.Set(key, value, expiry, d.info)
 	case TypeList:
 		length, _, err := d.readLength()
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
-		d.event.StartList(key, int64(length), expiry)
+		d.info.Encoding = "linkedlist"
+		d.event.StartList(key, int64(length), expiry, d.info)
 		for length > 0 {
 			length--
 			value, err := d.readString()
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 			d.event.Rpush(key, value)
 		}
@@ -338,9 +381,11 @@ func (d *decode) readObject(key []byte, typ ValueType, expiry int64) error {
 	case TypeListQuicklist:
 		length, _, err := d.readLength()
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
-		d.event.StartList(key, int64(-1), expiry)
+		d.info.Encoding = "quicklist"
+		d.info.Zips = length
+		d.event.StartList(key, int64(-1), expiry, d.info)
 		for length > 0 {
 			length--
 			d.readZiplist(key, 0, false)
@@ -349,14 +394,15 @@ func (d *decode) readObject(key []byte, typ ValueType, expiry int64) error {
 	case TypeSet:
 		cardinality, _, err := d.readLength()
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
-		d.event.StartSet(key, int64(cardinality), expiry)
+		d.info.Encoding = "hashtable"
+		d.event.StartSet(key, int64(cardinality), expiry, d.info)
 		for cardinality > 0 {
 			cardinality--
 			member, err := d.readString()
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 			d.event.Sadd(key, member)
 		}
@@ -366,25 +412,26 @@ func (d *decode) readObject(key []byte, typ ValueType, expiry int64) error {
 	case TypeZSet:
 		cardinality, _, err := d.readLength()
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
-		d.event.StartZSet(key, int64(cardinality), expiry)
+		d.info.Encoding = "skiplist"
+		d.event.StartZSet(key, int64(cardinality), expiry, d.info)
 		for cardinality > 0 {
 			cardinality--
 			member, err := d.readString()
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 			var score float64
 			if typ == TypeZSet2 {
 				score, err = d.readBinaryFloat64()
 				if err != nil {
-					return err
+					return errors.Trace(err)
 				}
 			} else {
 				score, err = d.readFloat64()
 				if err != nil {
-					return err
+					return errors.Trace(err)
 				}
 			}
 			d.event.Zadd(key, score, member)
@@ -393,34 +440,35 @@ func (d *decode) readObject(key []byte, typ ValueType, expiry int64) error {
 	case TypeHash:
 		length, _, err := d.readLength()
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
-		d.event.StartHash(key, int64(length), expiry)
+		d.info.Encoding = "hashtable"
+		d.event.StartHash(key, int64(length), expiry, d.info)
 		for length > 0 {
 			length--
 			field, err := d.readString()
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 			value, err := d.readString()
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 			d.event.Hset(key, field, value)
 		}
 		d.event.EndHash(key)
 	case TypeHashZipmap:
-		return d.readZipmap(key, expiry)
+		return errors.Trace(d.readZipmap(key, expiry))
 	case TypeListZiplist:
-		return d.readZiplist(key, expiry, true)
+		return errors.Trace(d.readZiplist(key, expiry, true))
 	case TypeSetIntset:
-		return d.readIntset(key, expiry)
+		return errors.Trace(d.readIntset(key, expiry))
 	case TypeZSetZiplist:
-		return d.readZiplistZset(key, expiry)
+		return errors.Trace(d.readZiplistZset(key, expiry))
 	case TypeHashZiplist:
-		return d.readZiplistHash(key, expiry)
+		return errors.Trace(d.readZiplistHash(key, expiry))
 	case TypeStreamListPacks:
-		return d.readStream(key, expiry)
+		return errors.Trace(d.readStream(key, expiry))
 	case TypeModule:
 		fallthrough
 	case TypeModule2:
@@ -434,7 +482,7 @@ func (d *decode) readObject(key []byte, typ ValueType, expiry int64) error {
 func (d *decode) readModule(key []byte, expiry int64) error {
 	moduleid, _, err := d.readLength()
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	return fmt.Errorf("Not supported load module %v", moduleid)
 }
@@ -442,15 +490,16 @@ func (d *decode) readModule(key []byte, expiry int64) error {
 func (d *decode) readStream(key []byte, expiry int64) error {
 	cardinality, _, err := d.readLength()
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
-	d.event.StartStream(key, int64(cardinality), expiry)
+	d.info.Encoding = "listpack"
+	d.event.StartStream(key, int64(cardinality), expiry, d.info)
 	for cardinality > 0 {
 		cardinality--
 
 		streamID, err := d.readString()
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		/*
 			IDms := strconv.FormatUint(binary.BigEndian.Uint64(streamID[:8]), 10)
@@ -458,70 +507,139 @@ func (d *decode) readStream(key []byte, expiry int64) error {
 			fmt.Println(string(key))
 			fmt.Println(IDms + "-" + IDseq)
 		*/
-		err = d.readListPack()
+		listPack, err := d.readString()
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
-		d.event.Xadd(key, streamID, []byte{})
+		d.event.Xadd(key, streamID, listPack)
 	}
-	var length, lastIDms, lastIDseq uint64
-	length, _, err = d.readLength()
+	var items, lastIDms, lastIDseq uint64
+	items, _, err = d.readLength()
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	lastIDms, _, err = d.readLength()
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	lastIDseq, _, err = d.readLength()
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
-	_, _, _ = length, lastIDms, lastIDseq
+
+	lastEntryID := fmt.Sprintf("%d-%d", lastIDms, lastIDseq)
 
 	//TODO output consumer groups
 	var groupsCount uint64
 	groupsCount, _, err = d.readLength()
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
-	//fmt.Println(groupsCount)
+
+	cgroupsData := make(StreamGroups, 0, groupsCount)
 	for groupsCount > 0 {
 		groupsCount--
-		name, err := d.readString()
-		if err != nil {
-			return err
-		}
-		gIDms, _, _ := d.readLength()
-		gIDseq, _, _ := d.readLength()
-		_, _, _ = name, gIDms, gIDseq
 
-		pelSize, _, _ := d.readLength()
+		cgname, err := d.readString()
+		if err != nil {
+			return errors.Trace(err)
+		}
+		gIDms, _, err := d.readLength()
+		if err != nil {
+			return errors.Trace(err)
+		}
+		gIDseq, _, err := d.readLength()
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		lastCgEntryID := fmt.Sprintf("%d-%d", gIDms, gIDseq)
+
+		pelSize, _, err := d.readLength()
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		groupPendingEntries := make([]*StreamPendingEntry, 0, pelSize)
 		for pelSize > 0 {
 			pelSize--
-			d.readUint64()
+			// d.readUint64()
 			rawid := make([]byte, 16)
-			io.ReadFull(d.r, rawid)
-			d.readUint64()
-			d.readLength()
+			n, err := io.ReadFull(d.r, rawid)
+			if err != nil {
+				return errors.Trace(err)
+			}
+			if n != 16 {
+				return errors.Errorf("expected %d got %d", 16, n)
+			}
+
+			deliveryTime, err := d.readUint64()
+			if err != nil {
+				return errors.Trace(err)
+			}
+			deliveryCount, _, err := d.readLength()
+			if err != nil {
+				return errors.Trace(err)
+			}
+
+			groupPendingEntries = append(groupPendingEntries, &StreamPendingEntry{
+				ID:            rawid,
+				DeliveryTime:  deliveryTime,
+				DeliveryCount: deliveryCount,
+			})
 		}
-		consumersNum, _, _ := d.readLength()
+
+		consumersNum, _, err := d.readLength()
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		consumersData := make([]*StreamConsumerData, 0, consumersNum)
 		for consumersNum > 0 {
 			consumersNum--
-			d.readString()
-			d.readUint64()
-			pelSize, _, _ := d.readLength()
+			cname, err := d.readString()
+			if err != nil {
+				return errors.Trace(err)
+			}
+			seenTime, err := d.readUint64()
+			if err != nil {
+				return errors.Trace(err)
+			}
+			pelSize, _, err := d.readLength()
+			if err != nil {
+				return errors.Trace(err)
+			}
+			consumerPendingEntries := make([]*StreamConsumerPendingEntry, 0, pelSize)
 			for pelSize > 0 {
 				pelSize--
-				d.readUint64()
 				rawid := make([]byte, 16)
-				io.ReadFull(d.r, rawid)
+				n, err := io.ReadFull(d.r, rawid)
+				if err != nil {
+					return errors.Trace(err)
+				}
+				if n != 16 {
+					return errors.Errorf("expected %d got %d", 16, n)
+				}
+
+				consumerPendingEntries = append(consumerPendingEntries, &StreamConsumerPendingEntry{ID: rawid})
 			}
+
+			consumersData = append(consumersData, &StreamConsumerData{
+				Name:     cname,
+				SeenTime: seenTime,
+				Pending:  consumerPendingEntries,
+			})
 		}
+
+		cgroupsData = append(cgroupsData, &StreamGroup{
+			Name:        cgname,
+			LastEntryId: lastCgEntryID,
+			Pending:     groupPendingEntries,
+			Consumers:   consumersData,
+		})
 	}
 
-	d.event.EndStream(key)
-
+	d.event.EndStream(key, items, lastEntryID, cgroupsData)
 	return nil
 }
 
@@ -529,31 +647,33 @@ func (d *decode) readZipmap(key []byte, expiry int64) error {
 	var length int
 	zipmap, err := d.readString()
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	buf := newSliceBuffer(zipmap)
 	lenByte, err := buf.ReadByte()
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	if lenByte >= 254 { // we need to count the items manually
 		length, err = countZipmapItems(buf)
 		length /= 2
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 	} else {
 		length = int(lenByte)
 	}
-	d.event.StartHash(key, int64(length), expiry)
+	d.info.Encoding = "zipmap"
+	d.info.SizeOfValue = len(zipmap)
+	d.event.StartHash(key, int64(length), expiry, d.info)
 	for i := 0; i < length; i++ {
 		field, err := readZipmapItem(buf, false)
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		value, err := readZipmapItem(buf, true)
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		d.event.Hset(key, field, value)
 	}
@@ -626,14 +746,14 @@ func (d *decode) readListPack() error {
 	//fmt.Println(len(listpack))
 	//fmt.Println(listpack)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	buf := newSliceBuffer(listpack)
 	buf.Slice(4) // total bytes
 	numElements, _ := buf.Slice(2)
 	num := int64(binary.LittleEndian.Uint16(numElements))
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	for {
 		num--
@@ -785,20 +905,22 @@ func lpEncoding32BitStrLen(b []byte) uint32 {
 func (d *decode) readZiplist(key []byte, expiry int64, addListEvents bool) error {
 	ziplist, err := d.readString()
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	buf := newSliceBuffer(ziplist)
 	length, err := readZiplistLength(buf)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	if addListEvents {
-		d.event.StartList(key, length, expiry)
+		d.info.Encoding = "ziplist"
+		d.info.SizeOfValue = len(ziplist)
+		d.event.StartList(key, length, expiry, d.info)
 	}
 	for i := int64(0); i < length; i++ {
 		entry, err := readZiplistEntry(buf)
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		d.event.Rpush(key, entry)
 	}
@@ -811,27 +933,29 @@ func (d *decode) readZiplist(key []byte, expiry int64, addListEvents bool) error
 func (d *decode) readZiplistZset(key []byte, expiry int64) error {
 	ziplist, err := d.readString()
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	buf := newSliceBuffer(ziplist)
 	cardinality, err := readZiplistLength(buf)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	cardinality /= 2
-	d.event.StartZSet(key, cardinality, expiry)
+	d.info.Encoding = "ziplist"
+	d.info.SizeOfValue = len(ziplist)
+	d.event.StartZSet(key, cardinality, expiry, d.info)
 	for i := int64(0); i < cardinality; i++ {
 		member, err := readZiplistEntry(buf)
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		scoreBytes, err := readZiplistEntry(buf)
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		score, err := strconv.ParseFloat(string(scoreBytes), 64)
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		d.event.Zadd(key, score, member)
 	}
@@ -842,23 +966,25 @@ func (d *decode) readZiplistZset(key []byte, expiry int64) error {
 func (d *decode) readZiplistHash(key []byte, expiry int64) error {
 	ziplist, err := d.readString()
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	buf := newSliceBuffer(ziplist)
 	length, err := readZiplistLength(buf)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	length /= 2
-	d.event.StartHash(key, length, expiry)
+	d.info.Encoding = "ziplist"
+	d.info.SizeOfValue = len(ziplist)
+	d.event.StartHash(key, length, expiry, d.info)
 	for i := int64(0); i < length; i++ {
 		field, err := readZiplistEntry(buf)
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		value, err := readZiplistEntry(buf)
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		d.event.Hset(key, field, value)
 	}
@@ -941,12 +1067,12 @@ func readZiplistEntry(buf *sliceBuffer) ([]byte, error) {
 func (d *decode) readIntset(key []byte, expiry int64) error {
 	intset, err := d.readString()
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	buf := newSliceBuffer(intset)
 	intSizeBytes, err := buf.Slice(4)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	intSize := binary.LittleEndian.Uint32(intSizeBytes)
 
@@ -956,15 +1082,17 @@ func (d *decode) readIntset(key []byte, expiry int64) error {
 
 	lenBytes, err := buf.Slice(4)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	cardinality := binary.LittleEndian.Uint32(lenBytes)
 
-	d.event.StartSet(key, int64(cardinality), expiry)
+	d.info.SizeOfValue = len(intset)
+	d.info.Encoding = "intset"
+	d.event.StartSet(key, int64(cardinality), expiry, d.info)
 	for i := uint32(0); i < cardinality; i++ {
 		intBytes, err := buf.Slice(int(intSize))
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		var intString string
 		switch intSize {
@@ -985,7 +1113,7 @@ func (d *decode) checkHeader() error {
 	header := make([]byte, 9)
 	_, err := io.ReadFull(d.r, header)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	if !bytes.Equal(header[:5], []byte("REDIS")) {
@@ -997,61 +1125,74 @@ func (d *decode) checkHeader() error {
 		return fmt.Errorf("rdb: invalid RDB version number %d", version)
 	}
 
+	d.rdbVersion = int(version)
 	return nil
 }
 
 func (d *decode) readString() ([]byte, error) {
 	length, encoded, err := d.readLength()
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 	if encoded {
 		switch length {
 		case rdbEncInt8:
 			i, err := d.readUint8()
-			return []byte(strconv.FormatInt(int64(int8(i)), 10)), err
+			return []byte(strconv.FormatInt(int64(int8(i)), 10)), errors.Trace(err)
 		case rdbEncInt16:
 			i, err := d.readUint16()
-			return []byte(strconv.FormatInt(int64(int16(i)), 10)), err
+			return []byte(strconv.FormatInt(int64(int16(i)), 10)), errors.Trace(err)
 		case rdbEncInt32:
 			i, err := d.readUint32()
-			return []byte(strconv.FormatInt(int64(int32(i)), 10)), err
+			return []byte(strconv.FormatInt(int64(int32(i)), 10)), errors.Trace(err)
 		case rdbEncLZF:
 			clen, _, err := d.readLength()
 			if err != nil {
-				return nil, err
+				return nil, errors.Trace(err)
 			}
 			ulen, _, err := d.readLength()
 			if err != nil {
-				return nil, err
+				return nil, errors.Trace(err)
 			}
 			compressed := make([]byte, clen)
 			_, err = io.ReadFull(d.r, compressed)
 			if err != nil {
-				return nil, err
+				return nil, errors.Trace(err)
 			}
 			decompressed := lzfDecompress(compressed, int(ulen))
 			if len(decompressed) != int(ulen) {
 				return nil, fmt.Errorf("decompressed string length %d didn't match expected length %d", len(decompressed), ulen)
 			}
 			return decompressed, nil
+		default:
+			return nil, errors.Errorf("Unknown RDB string encoding type %d", length)
 		}
+	}
+
+	if length == rdbLenErr {
+		return nil, nil
 	}
 
 	str := make([]byte, length)
 	_, err = io.ReadFull(d.r, str)
-	return str, errors.Wrap(err, "readfailed")
+	if err != nil {
+		return str, errors.Wrap(err, errors.New("readfailed"))
+	}
+	return str, nil
 }
 
 func (d *decode) readUint8() (uint8, error) {
 	b, err := d.r.ReadByte()
-	return uint8(b), errors.Wrap(err, "readfailed")
+	if err != nil {
+		return uint8(b), errors.Wrap(err, errors.New("readfailed"))
+	}
+	return uint8(b), nil
 }
 
 func (d *decode) readUint16() (uint16, error) {
 	_, err := io.ReadFull(d.r, d.intBuf[:2])
 	if err != nil {
-		return 0, errors.Wrap(err, "readfailed")
+		return 0, errors.Wrap(err, errors.New("readfailed"))
 	}
 	return binary.LittleEndian.Uint16(d.intBuf), nil
 }
@@ -1059,7 +1200,7 @@ func (d *decode) readUint16() (uint16, error) {
 func (d *decode) readUint32() (uint32, error) {
 	_, err := io.ReadFull(d.r, d.intBuf[:4])
 	if err != nil {
-		return 0, errors.Wrap(err, "readfailed")
+		return 0, errors.Wrap(err, errors.New("readfailed"))
 	}
 	return binary.LittleEndian.Uint32(d.intBuf), nil
 }
@@ -1067,7 +1208,7 @@ func (d *decode) readUint32() (uint32, error) {
 func (d *decode) readUint64() (uint64, error) {
 	_, err := io.ReadFull(d.r, d.intBuf)
 	if err != nil {
-		return 0, errors.Wrap(err, "readfailed")
+		return 0, errors.Wrap(err, errors.New("readfailed"))
 	}
 	return binary.LittleEndian.Uint64(d.intBuf), nil
 }
@@ -1075,16 +1216,24 @@ func (d *decode) readUint64() (uint64, error) {
 func (d *decode) readUint32Big() (uint32, error) {
 	_, err := io.ReadFull(d.r, d.intBuf[:4])
 	if err != nil {
-		return 0, errors.Wrap(err, "readfailed")
+		return 0, errors.Wrap(err, errors.New("readfailed"))
 	}
 	return binary.BigEndian.Uint32(d.intBuf), nil
+}
+
+func (d *decode) readUint64Big() (uint64, error) {
+	_, err := io.ReadFull(d.r, d.intBuf)
+	if err != nil {
+		return 0, errors.Wrap(err, errors.New("readfailed"))
+	}
+	return binary.BigEndian.Uint64(d.intBuf), nil
 }
 
 func (d *decode) readBinaryFloat64() (float64, error) {
 	floatBytes := make([]byte, 8)
 	_, err := io.ReadFull(d.r, floatBytes)
 	if err != nil {
-		return 0, err
+		return 0, errors.Wrap(err, errors.New("readfailed"))
 	}
 	return math.Float64frombits(binary.LittleEndian.Uint64(floatBytes)), nil
 }
@@ -1122,10 +1271,11 @@ func (d *decode) readFloat64() (float64, error) {
 func (d *decode) readLength() (uint64, bool, error) {
 	b, err := d.r.ReadByte()
 	if err != nil {
-		return 0, false, errors.Wrap(err, "readfailed")
+		return 0, false, errors.Wrap(err, errors.New("readfailed"))
 	}
 	// The first two bits of the first byte are used to indicate the length encoding type
-	switch (b & 0xc0) >> 6 {
+	typ := (b & 0xc0) >> 6
+	switch typ {
 	case rdb6bitLen:
 		// When the first two bits are 00, the next 6 bits are the length.
 		return uint64(b & 0x3f), false, nil
@@ -1133,30 +1283,36 @@ func (d *decode) readLength() (uint64, bool, error) {
 		// When the first two bits are 01, the next 14 bits are the length.
 		bb, err := d.r.ReadByte()
 		if err != nil {
-			return 0, false, errors.Wrap(err, "readfailed")
+			return 0, false, errors.Wrap(err, errors.New("readfailed"))
 		}
 		return (uint64(b&0x3f) << 8) | uint64(bb), false, nil
-	case rdb32bitLen:
-		bb, err := d.readUint32()
-		if err != nil {
-			return 0, false, err
-		}
-		return uint64(bb), false, nil
-	case rdb64bitLen:
-		bb, err := d.readUint64()
-		if err != nil {
-			return 0, false, err
-		}
-		return bb, false, nil
+
 	case rdbEncVal:
 		// When the first two bits are 11, the next object is encoded.
 		// The next 6 bits indicate the encoding type.
 		return uint64(b & 0x3f), true, nil
+
 	default:
+		switch b {
+		case rdb32bitLen:
+			bb, err := d.readUint32Big()
+			if err != nil {
+				return 0, false, err
+			}
+			return uint64(bb), false, nil
+		case rdb64bitLen:
+			bb, err := d.readUint64Big()
+			if err != nil {
+				return 0, false, err
+			}
+			return bb, false, nil
+		default:
+			return 0, false, errors.Errorf("Unknown length encoding %d in rdbLoadLen()", b)
+		}
 		// When the first two bits are 10, the next 6 bits are discarded.
 		// The next 4 bytes are the length.
-		length, err := d.readUint32Big()
-		return uint64(length), false, err
+		// length, err := d.readUint32Big()
+		// return uint64(length), false, err
 	}
 
 }
