@@ -94,7 +94,7 @@ func (c *Counter) GetLargestEntries(num int) []*decoder.Entry {
 	return res
 }
 
-//GetLargestKeyPrefixes from heap
+// GetLargestKeyPrefixes from heap
 func (c *Counter) GetLargestKeyPrefixes() []*PrefixEntry {
 	res := []*PrefixEntry{}
 
@@ -175,14 +175,7 @@ func (c *Counter) countByType(e *decoder.Entry) {
 }
 
 func (c *Counter) countByKeyPrefix(e *decoder.Entry) {
-	// reset all numbers to 0
-	k := strings.Map(func(c rune) rune {
-		if c >= 48 && c <= 57 { //48 == "0" 57 == "9"
-			return '0'
-		}
-		return c
-	}, e.Key)
-	prefixes := getPrefixes(k, c.separators)
+	prefixes := getPrefixes(e.Key, c.separators)
 	key := typeKey{
 		Type: e.Type,
 	}
